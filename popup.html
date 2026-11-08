@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Scoreboard - Rótulos</title>
+<!--
+  RÓTULOS (lower third) - fondo transparente.
+  Úsalo como Fuente de navegador en OBS (1920x1080) y sácalo por NDI en una salida aparte
+  (DistroAV: filtro "Dedicated NDI Output" en esa fuente) para ponerlo en una capa de Resolume.
+
+  Opciones por URL:   popup.html?pos=left|center|right   &scale=1.2   &test=1 (muestra un rótulo de prueba cada 6 s)
+  Se dispara desde el panel de control, automáticamente al anotar, o por HTTP:
+     /api/cmd?a=popup&l1=%2B3&l2=G.%20TORRES&l3=PONCE&team=home&ms=4000
+
+  PARA DISEÑAR TU PROPIO LOOK: edita solo el bloque CSS de abajo (colores, tipografía, tamaños) o
+  reemplaza .lt por una imagen PNG de Illustrator con los textos encima.
+-->
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;overflow:hidden;background:transparent;font-family:"Arial Narrow","Segoe UI",Arial,sans-serif;font-weight:800;color:#fff}
+  #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
+
+  /* ===== DISEÑO DEL RÓTULO (edita aquí) ===== */
+  :root{--home:#1b4bff;--away:#ff7a00;--accent:#ffd400;--dark:#050a24}
+  .lt{position:absolute;bottom:130px;display:flex;align-items:stretch;height:150px;
+      transform:translateX(-130%);opacity:0;transition:transform .55s cubic-bezier(.2,.9,.2,1),opacity .35s}
+  .lt.in{transform:none;opacity:1}
+  .lt .big{min-width:190px;padding:0 26px;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#000;font-size:96px;
+      clip-path:polygon(0 0,100% 0,calc(100% - 28px) 100%,0 100%)}
+  .lt .txt{padding:0 60px 0 30px;margin-left:-28px;display:flex;flex-direction:column;justify-content:center;background:var(--tc,var(--home));
+      clip-path:polygon(28px 0,100% 0,100% 100%,0 100%);border-bottom:8px solid #fff}
+  .lt .name{font-size:62px;line-height:1;letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+  .lt .team{font-size:30px;line-height:1.1;margin-top:6px;opacity:.9;letter-spacing:2px;text-transform:uppercase;white-space:nowrap}
+  /* ========================================== */
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="lt" id="lt"><div class="big" id="l1"></div><div class="txt"><div class="name" id="l2"></div><div class="team" id="l3"></div></div></div>
+</div>
+<script>
+const q = new URLSearchParams(location.search);
+const $ = (id) => document.getElementById(id);
+const pos = q.get('pos') || 'left', scale = parseFloat(q.get('scale')) || 1;
+function fit() { $('stage').style.transform = `scale(${Math.min(innerWidth / 1920, innerHeight / 1080)})`; }
+addEventListener('resize', fit); fit();
+
+const lt = $('lt');
+lt.style.transformOrigin = pos === 'right' ? 'right bottom' : 'left bottom';
+if (pos === 'left') lt.style.left = '80px';
+else if (pos === 'right') { lt.style.right = '80px'; lt.style.flexDirection = 'row'; }
+let hideT;
+function place() {
+  if (pos === 'center') { lt.style.left = '50%'; lt.style.marginLeft = -(lt.offsetWidth * scale / 2) + 'px'; }
+}
+function show(m) {
+  clearTimeout(hideT);
+  lt.classList.remove('in');
+  $('l1').textContent = m.l1; $('l2').textContent = m.l2; $('l3').textContent = m.l3;
+  lt.style.setProperty('--tc', m.team === 'away' ? 'var(--away)' : 'var(--home)');
+  $('l1').style.display = m.l1 ? 'flex' : 'none';
+  lt.style.scale = scale;
+  void lt.offsetWidth; place();
+  setTimeout(() => lt.classList.add('in'), 30);
+  hideT = setTimeout(hide, m.ms || 4000);
+}
+function hide() { lt.classList.remove('in'); }
+
+function connect() {
+  const ws = new WebSocket(`ws://${location.host}`);
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.t === 'popup') show(m); else if (m.t === 'popupHide') hide();
+  };
+  ws.onclose = () => setTimeout(connect, 1000);
+}
+connect();
+
+if (q.get('test')) {
+  const demo = () => show({ l1: '+3', l2: 'G. TORRES', l3: 'PONCE LEONES', team: Math.random() > .5 ? 'home' : 'away', ms: 3500 });
+  setTimeout(demo, 800); setInterval(demo, 6000);
+}
+</script>
+</body>
+</html>

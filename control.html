@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scoreboard - Control</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#0d1117;color:#e6edf3;font:14px/1.3 "Segoe UI",Arial,sans-serif}
+  header{display:flex;gap:16px;align-items:center;padding:8px 14px;background:#161b22;position:sticky;top:0;z-index:5;border-bottom:1px solid #30363d}
+  .dot{width:12px;height:12px;border-radius:50%;background:#f85149}.dot.ok{background:#3fb950}
+  .clocks{display:flex;gap:22px;align-items:baseline;margin-left:auto;font-variant-numeric:tabular-nums}
+  .clocks b{font-size:30px}.clocks .sh{color:#ffd400}.clocks .tm{color:#ff7b72}
+  main{padding:12px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+  section{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px}
+  h3{margin:0 0 8px;font-size:15px;color:#8b949e;text-transform:uppercase;letter-spacing:1px}
+  h4{margin:12px 0 6px;font-size:12px;color:#8b949e;text-transform:uppercase;letter-spacing:1px}
+  button,a.btn{background:#21262d;color:#e6edf3;border:1px solid #444c56;border-radius:6px;padding:8px 12px;font-size:14px;cursor:pointer;margin:2px;text-decoration:none;display:inline-block}
+  button:hover,a.btn:hover{background:#30363d}button:active{background:#1f6feb}
+  button.big,a.btn.big{padding:16px 22px;font-size:18px;font-weight:700}
+  button.go,a.btn.go{background:#238636;border-color:#2ea043}button.stop{background:#b62324;border-color:#da3633}
+  button.warn{background:#9a6700;border-color:#bb8009}
+  button.sm{padding:3px 8px;font-size:12px;margin:1px}
+  input[type=text],input[type=number],select,textarea{background:#0d1117;color:#e6edf3;border:1px solid #444c56;border-radius:6px;padding:6px;width:100%;font:inherit}
+  textarea{height:84px;resize:vertical}
+  input.num{width:48px;text-align:center}
+  label{display:block;margin:6px 0 2px;color:#8b949e;font-size:12px}
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .big-score{font-size:54px;font-weight:800;min-width:90px;text-align:center}
+  table{border-collapse:collapse;width:100%}td,th{padding:2px 3px;text-align:center;border-bottom:1px solid #21262d}
+  td.nm input{text-align:left}
+  .stat b{display:inline-block;min-width:22px}
+  .kbd{color:#8b949e;font-size:12px}
+  .wide{grid-column:1/-1}
+  .tag{display:inline-block;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:700;background:#b62324;color:#fff;margin-left:6px}
+  .tag:empty{display:none}
+  .pfw{color:#ffd400}.pfx{color:#ff7b72}
+  table.games td{text-align:left;padding:4px 6px}
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="dot"></span><span id="status">Conectando…</span>
+  <span class="kbd">Pantalla: <code id="durl"></code></span>
+  <div class="clocks"><b class="tm" id="ct"></b><span id="plabel"></span><b id="cg">10:00</b><b class="sh" id="cs">24</b></div>
+</header>
+
+<main>
+<section class="wide">
+  <h3>Relojes (mesa)</h3>
+  <div class="row">
+    <button class="big go" data-c='{"a":"gameToggle"}'>▶ / ⏸ Reloj juego <span class="kbd">[Espacio]</span></button>
+    <button class="big" data-c='{"a":"shotReset","ms":24000}'>24 <span class="kbd">[1]</span></button>
+    <button class="big" data-c='{"a":"shotReset","ms":14000}'>14 <span class="kbd">[2]</span></button>
+    <button class="big stop" data-c='{"a":"shotToggle"}'>Parar/seguir 24 <span class="kbd">[S]</span></button>
+    <button class="big" data-c='{"a":"periodNext"}'>Siguiente periodo ⏭</button>
+    <button data-c='{"a":"periodPrev"}'>Periodo anterior</button>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <span>Juego:</span>
+    <button data-c='{"a":"gameAdjust","ms":-10000}'>−10s</button><button data-c='{"a":"gameAdjust","ms":-1000}'>−1s</button>
+    <button data-c='{"a":"gameAdjust","ms":1000}'>+1s</button><button data-c='{"a":"gameAdjust","ms":10000}'>+10s</button>
+    <input class="num" id="setm" type="number" min="0" value="10"> :
+    <input class="num" id="sets" type="number" min="0" max="59" value="0">
+    <button id="setgame">Fijar</button>
+    <span style="margin-left:14px">24s:</span>
+    <button data-c='{"a":"shotAdjust","ms":-1000}'>−1</button><button data-c='{"a":"shotAdjust","ms":1000}'>+1</button>
+  </div>
+</section>
+
+<section class="wide">
+  <h3>Jugada: posesión, tiempos fuera, descansos</h3>
+  <div class="row">
+    <span>Posesión:</span>
+    <button class="big" data-c='{"a":"possession","team":"home"}'>◀ Local</button>
+    <button class="big" data-c='{"a":"possession","team":"away"}'>Visitante ▶</button>
+    <button data-c='{"a":"possessionToggle"}'>Alternar <span class="kbd">[P]</span></button>
+    <button data-c='{"a":"possession","team":"none"}'>Quitar</button>
+    <span style="margin-left:18px"></span>
+    <button class="big warn" data-c='{"a":"undo"}'>↶ Deshacer <span class="kbd">[Z]</span></button>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <span>Tiempo fuera:</span>
+    <button class="big" data-c='{"a":"timeoutStart","team":"home"}'>Local (<b data-bind="teams.home.timeouts"></b>)</button>
+    <button class="big" data-c='{"a":"timeoutStart","team":"away"}'>Visitante (<b data-bind="teams.away.timeouts"></b>)</button>
+    <span style="margin-left:12px">Descanso:</span>
+    <button data-c='{"a":"breakStart","kind":"q"}'>Entre periodos</button>
+    <button data-c='{"a":"breakStart","kind":"half"}'>Medio tiempo</button>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <span>Cronómetro actual:</span>
+    <button data-c='{"a":"timerToggle"}'>⏸ / ▶</button>
+    <button data-c='{"a":"timerAdjust","ms":-10000}'>−10s</button><button data-c='{"a":"timerAdjust","ms":10000}'>+10s</button>
+    <button data-c='{"a":"timerStop"}'>Terminar</button>
+    <button data-c='{"a":"timerStop","refund":true}'>Cancelar y devolver tiempo fuera</button>
+    <span style="margin-left:12px"></span>
+    <button class="stop" data-c='{"a":"final"}'>🏁 FINAL (marcar/quitar)</button>
+    <button data-c='{"a":"horn","k":"game"}'>Probar contorno rojo</button>
+  </div>
+</section>
+
+<section class="wide">
+  <h3>Vista del centro de la pantalla</h3>
+  <div class="row">
+    <button class="big" data-c='{"a":"set","path":"settings.centerView","value":"none"}'>Ninguna (anuncios de Resolume)</button>
+    <button class="big go" data-c='{"a":"set","path":"settings.centerView","value":"leaders"}'>Líderes del juego</button>
+    <button class="big go" data-c='{"a":"set","path":"settings.centerView","value":"compare"}'>Comparativa de equipos</button>
+    <span class="kbd">Actual: <b data-bind="settings.centerView"></b></span>
+  </div>
+</section>
+
+<section class="wide">
+  <h3>Rótulo de anotación (popup.html)</h3>
+  <div class="row">
+    <div style="width:90px"><label>Texto grande</label><input type="text" id="p1" value="+3"></div>
+    <div style="flex:2;min-width:180px"><label>Nombre</label><input type="text" id="p2" value="G. TORRES"></div>
+    <div style="flex:2;min-width:180px"><label>Equipo / detalle</label><input type="text" id="p3" value="PONCE"></div>
+    <div style="width:120px"><label>Color</label><select id="pt"><option value="home">Local</option><option value="away">Visitante</option></select></div>
+    <button class="go" id="plaunch" style="margin-top:18px">Lanzar rótulo</button>
+    <button data-c='{"a":"popupHide"}' style="margin-top:18px">Ocultar</button>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <label style="margin:0"><input type="checkbox" data-path="settings.popupAuto" data-type="bool"> Lanzar rótulo automáticamente cuando un jugador anota</label>
+    <span class="kbd">· Fuente de navegador en OBS: <code id="purl"></code></span>
+  </div>
+</section>
+
+<section id="t-home"></section>
+<section id="t-away"></section>
+<section class="wide" id="r-home"></section>
+<section class="wide" id="r-away"></section>
+
+<section class="wide">
+  <h3>Plantillas de equipos (base de datos)</h3>
+  <div class="row" style="align-items:flex-start">
+    <div style="flex:1;min-width:380px" id="db-home"></div>
+    <div style="flex:1;min-width:380px" id="db-away"></div>
+  </div>
+  <div class="kbd" style="margin-top:6px">Guardar usa el nombre del equipo. Para importar pega una lista, una línea por jugador: <code>4, G. Torres</code> (los primeros 5 quedan “en cancha”).</div>
+</section>
+
+<section class="wide">
+  <h3>Resumen del juego (PDF)</h3>
+  <div class="row">
+    <a class="btn big go" href="/report.pdf" target="_blank">📄 Ver PDF del juego actual</a>
+    <a class="btn big" href="/report.pdf?dl=1">⬇ Descargar PDF</a>
+  </div>
+  <h4>Historial de juegos</h4>
+  <table class="games" id="games"><tr><td class="kbd">Cargando…</td></tr></table>
+</section>
+
+<section class="wide">
+  <h3>Ajustes</h3>
+  <div class="row">
+    <div style="flex:2;min-width:220px"><label>Título superior</label><input type="text" data-path="settings.title"></div>
+    <div><label>Centro de la pantalla</label>
+      <select data-path="settings.center"><option value="black">Negro</option><option value="transparent">Transparente (alpha)</option><option value="green">Verde (chroma)</option></select></div>
+    <div><label>Cuadro inferior de cada equipo</label>
+      <select data-path="settings.bottom"><option value="stats">Estadísticas del equipo</option><option value="note">Nota de texto</option></select></div>
+    <div><label>Minutos por periodo</label><input type="number" data-path="settings.periodMs" data-type="min"></div>
+    <div><label>Minutos de OT</label><input type="number" data-path="settings.otMs" data-type="min"></div>
+  </div>
+  <div class="row">
+    <div><label>Faltas de equipo para BONUS</label><input type="number" data-path="settings.foulBonus" data-type="int"></div>
+    <div><label>Faltas para eliminar jugador</label><input type="number" data-path="settings.foulOut" data-type="int"></div>
+    <div><label>Tiempo fuera (segundos)</label><input type="number" data-path="settings.timeoutMs" data-type="sec"></div>
+    <div><label>Descanso entre periodos (min)</label><input type="number" data-path="settings.breakMs" data-type="min"></div>
+    <div><label>Medio tiempo (min)</label><input type="number" data-path="settings.halfMs" data-type="min"></div>
+    <div><label>Duración del rótulo (seg)</label><input type="number" data-path="settings.popupMs" data-type="sec"></div>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <label style="margin:0"><input type="checkbox" data-path="settings.linkShot" data-type="bool"> 24s ligado al reloj del juego</label>
+    <label style="margin:0 0 0 14px"><input type="checkbox" data-path="settings.shotVisible" data-type="bool"> Mostrar reloj de 24</label>
+    <button class="stop" id="reset" style="margin-left:auto">Nuevo juego (reiniciar todo)</button>
+  </div>
+</section>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+let S = null, ws, label = '1 QT';
+let clk = { g: 0, s: 0, gr: false, sr: false, tm: 0, tr: false, at: performance.now() };
+const get = (p) => p.split('.').reduce((o, k) => (o == null ? o : o[k]), S);
+const send = (o) => ws && ws.readyState === 1 && ws.send(JSON.stringify({ t: 'cmd', ...o }));
+$('#durl').textContent = `${location.origin}/display.html`;
+$('#purl').textContent = `${location.origin}/popup.html`;
+
+// ---------- construcción de la interfaz ----------
+const btn = (cmd, txt, cls = '') => `<button class="sm ${cls}" data-c='${JSON.stringify(cmd)}'>${txt}</button>`;
+function teamHTML(t, title) {
+  const P = `teams.${t}`;
+  return `<h3>${title}</h3>
+  <div class="row"><div style="flex:2"><label>Nombre</label><input type="text" data-path="${P}.name"></div>
+    <div style="flex:1"><label>Sigla</label><input type="text" data-path="${P}.short"></div></div>
+  <label>Logo (ruta o URL, ej. /logos/ponce.png)</label><input type="text" data-path="${P}.logo">
+  <label>Nota (cuadro inferior)</label><input type="text" data-path="${P}.note">
+  <div class="row" style="margin-top:8px">
+    <span class="big-score" data-bind="${P}.score"></span>
+    ${[1, 2, 3].map((n) => `<button class="big" data-c='{"a":"inc","path":"${P}.score","by":${n}}'>+${n}</button>`).join('')}
+    <button class="big" data-c='{"a":"inc","path":"${P}.score","by":-1}'>−1</button>
+  </div>
+  <div class="row" style="margin-top:6px">
+    Faltas <b data-bind="${P}.fouls"></b><span class="tag" data-bonus="${t}"></span>${btn({ a: 'inc', path: P + '.fouls', by: 1 }, '+')}${btn({ a: 'inc', path: P + '.fouls', by: -1 }, '−')}
+    &nbsp; Tiempos <b data-bind="${P}.timeouts"></b>${btn({ a: 'inc', path: P + '.timeouts', by: 1 }, '+')}${btn({ a: 'inc', path: P + '.timeouts', by: -1 }, '−')}
+  </div>
+  <h3 style="margin-top:12px">Estadísticas de equipo (cuadro inferior)</h3>
+  ${[['p2', 'Tiro de 2'], ['p3', 'Triple'], ['ft', 'Tiro libre']].map(([k, n]) => `
+  <div class="row" style="margin-bottom:4px"><span style="width:78px">${n}</span><b data-shoot="${t}.${k}" style="min-width:56px;font-size:18px"></b>
+    <button class="go" data-c='{"a":"shot","team":"${t}","k":"${k}","made":true}'>✔ Anotado</button>
+    <button data-c='{"a":"shot","team":"${t}","k":"${k}","made":false}'>✘ Fallado</button>
+    ${btn({ a: 'shot', team: t, k, made: true, undo: true }, 'deshacer ✔')}${btn({ a: 'shot', team: t, k, made: false, undo: true }, 'deshacer ✘')}
+  </div>`).join('')}
+  <div class="row" style="margin-top:6px">
+    ${[['stl', 'Robos'], ['tov', 'Pérdidas'], ['blk', 'Tapones']].map(([k, n]) =>
+      `${n} <b data-bind="${P}.stats.${k}"></b>${btn({ a: 'inc', path: P + '.stats.' + k, by: 1 }, '+')}${btn({ a: 'inc', path: P + '.stats.' + k, by: -1 }, '−')} &nbsp;`).join('')}
+  </div>
+  <div class="kbd" style="margin-top:6px">Rebotes y asistencias se suman solos desde la plantilla.</div>`;
+}
+function stat(t, i, s, ups) {
+  return `<span class="stat"><b data-bind="teams.${t}.players.${i}.${s}"></b>` +
+    ups.map((n) => btn({ a: 'playerStat', team: t, i, stat: s, by: n }, '+' + n)).join('') +
+    btn({ a: 'playerStat', team: t, i, stat: s, by: -1 }, '−') + '</span>';
+}
+function rosterHTML(t, title) {
+  let rows = '';
+  for (let i = 0; i < 12; i++) {
+    const P = `teams.${t}.players.${i}`;
+    rows += `<tr><td><input type="checkbox" data-path="${P}.on" data-type="bool" title="En cancha (se muestra en pantalla, máx. 5)"></td>
+      <td><input class="num" type="text" data-path="${P}.n"></td>
+      <td class="nm"><input type="text" data-path="${P}.name"></td>
+      <td><input class="num" type="text" maxlength="3" data-path="${P}.pos" placeholder="PG"></td>
+      <td>${stat(t, i, 'pts', [1, 2, 3])}</td><td>${stat(t, i, 'reb', [1])}</td><td>${stat(t, i, 'ast', [1])}</td><td data-pf="${t}.${i}">${stat(t, i, 'pf', [1])}</td></tr>`;
+  }
+  return `<h3>${title} — plantilla (marca “en cancha” a los 5 que se muestran)</h3>
+    <table><tr><th>Cancha</th><th>#</th><th>Jugador</th><th>Pos</th><th>PTS</th><th>REB</th><th>AST</th><th>FAL</th></tr>${rows}</table>`;
+}
+function dbHTML(t, title) {
+  return `<h4 style="margin-top:0">${title}</h4>
+    <div class="row"><select id="sel-${t}" style="flex:1"></select>
+      <button data-load="${t}">Cargar</button><button data-save="${t}" class="go">Guardar actual</button><button data-del="${t}" class="stop">Borrar</button></div>
+    <textarea id="imp-${t}" placeholder="4, G. Torres, PG&#10;5, A. Gonzalez, SG&#10;6, C. De Jesus, C"></textarea>
+    <button data-import="${t}">Importar lista</button>`;
+}
+$('#t-home').innerHTML = teamHTML('home', 'Local'); $('#t-away').innerHTML = teamHTML('away', 'Visitante');
+$('#r-home').innerHTML = rosterHTML('home', 'Local'); $('#r-away').innerHTML = rosterHTML('away', 'Visitante');
+$('#db-home').innerHTML = dbHTML('home', 'Local'); $('#db-away').innerHTML = dbHTML('away', 'Visitante');
+
+// ---------- eventos ----------
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-c]'); if (b) return send(JSON.parse(b.dataset.c));
+  const el = e.target.closest('button'); if (!el) return;
+  const d = el.dataset;
+  if (d.save) send({ a: 'saveTeam', team: d.save });
+  else if (d.load) { const id = $('#sel-' + d.load).value; if (id) send({ a: 'loadTeam', team: d.load, id }); }
+  else if (d.del) { const s = $('#sel-' + d.del); if (s.value && confirm(`¿Borrar la plantilla "${s.selectedOptions[0].text}"?`)) send({ a: 'deleteTeam', id: s.value }); }
+  else if (d.import) { const ta = $('#imp-' + d.import); if (ta.value.trim()) { send({ a: 'importRoster', team: d.import, text: ta.value }); ta.value = ''; } }
+});
+document.addEventListener('change', (e) => {
+  const el = e.target; const p = el.dataset.path; if (!p) return;
+  const ty = el.dataset.type; let v = el.value;
+  if (ty === 'bool') v = el.checked;
+  else if (ty === 'min') v = Math.max(0, Math.round(parseFloat(v) * 60000));
+  else if (ty === 'sec') v = Math.max(0, Math.round(parseFloat(v) * 1000));
+  else if (ty === 'int') v = Math.max(0, parseInt(v, 10) || 0);
+  send({ a: 'set', path: p, value: v });
+});
+$('#setgame').onclick = () => send({ a: 'gameSet', ms: (+$('#setm').value * 60 + +$('#sets').value) * 1000 });
+$('#reset').onclick = () => confirm('¿Empezar un juego nuevo? (el actual queda guardado en el historial)') && send({ a: 'resetGame' });
+$('#plaunch').onclick = () => send({ a: 'popup', l1: $('#p1').value, l2: $('#p2').value, l3: $('#p3').value, team: $('#pt').value });
+
+addEventListener('keydown', (e) => {
+  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) && document.activeElement.type !== 'checkbox') return;
+  const k = { ' ': { a: 'gameToggle' }, '1': { a: 'shotReset', ms: 24000 }, '2': { a: 'shotReset', ms: 14000 },
+    s: { a: 'shotToggle' }, S: { a: 'shotToggle' }, p: { a: 'possessionToggle' }, P: { a: 'possessionToggle' }, z: { a: 'undo' }, Z: { a: 'undo' } }[e.key];
+  if (k) { e.preventDefault(); send(k); }
+});
+
+// ---------- estado ----------
+function paint() {
+  if (!S) return;
+  $$('[data-bind]').forEach((el) => (el.textContent = get(el.dataset.bind)));
+  $$('[data-shoot]').forEach((el) => {
+    const [t, k] = el.dataset.shoot.split('.'); const st = S.teams[t].stats;
+    el.textContent = `${st[k + 'm']}/${st[k + 'a']}`;
+  });
+  $$('[data-bonus]').forEach((el) => { const t = S.teams[el.dataset.bonus]; el.textContent = t.fouls >= S.settings.foulBonus ? 'BONUS' : ''; });
+  $$('[data-pf]').forEach((el) => {
+    const [t, i] = el.dataset.pf.split('.'); const pf = S.teams[t].players[i].pf;
+    el.className = pf >= S.settings.foulOut ? 'pfx' : pf > 0 && pf >= S.settings.foulOut - 1 ? 'pfw' : '';
+  });
+  $$('[data-path]').forEach((el) => {
+    if (el === document.activeElement) return;
+    const v = get(el.dataset.path); const ty = el.dataset.type;
+    if (ty === 'bool') el.checked = !!v;
+    else if (ty === 'min') el.value = v / 60000;
+    else if (ty === 'sec') el.value = v / 1000;
+    else el.value = v ?? '';
+  });
+  $('#plabel').textContent = S.final ? 'FINAL' : label;
+}
+const two = (n) => String(n).padStart(2, '0');
+function loop() {
+  const el = performance.now() - clk.at;
+  const g = Math.max(0, clk.g - (clk.gr ? el : 0)), s = Math.max(0, clk.s - (clk.sr ? el : 0)), tm = Math.max(0, clk.tm - (clk.tr ? el : 0));
+  $('#cg').textContent = g < 60000 ? (Math.floor(g / 100) / 10).toFixed(1) : Math.floor(Math.ceil(g / 1000) / 60) + ':' + two(Math.ceil(g / 1000) % 60);
+  $('#cs').textContent = Math.ceil(s / 1000);
+  $('#ct').textContent = S && S.timer.kind ? `${S.timer.label} ${Math.floor(Math.ceil(tm / 1000) / 60)}:${two(Math.ceil(tm / 1000) % 60)}` : '';
+  requestAnimationFrame(loop);
+}
+loop();
+
+// ---------- listas (plantillas guardadas / historial) ----------
+function loadLists() {
+  fetch('/api/teams').then((r) => r.json()).then((list) => {
+    for (const t of ['home', 'away']) {
+      const sel = $('#sel-' + t); const keep = sel.value;
+      sel.innerHTML = list.length ? list.map((x) => `<option value="${x.id}">${x.name}</option>`).join('') : '<option value="">(no hay plantillas guardadas)</option>';
+      if (keep) sel.value = keep;
+    }
+  }).catch(() => {});
+  fetch('/api/games').then((r) => r.json()).then((g) => {
+    $('#games').innerHTML = g.length ? g.map((x) => {
+      const d = new Date(x.started).toLocaleString('es-PR', { dateStyle: 'short', timeStyle: 'short' });
+      const link = x.has_final ? `<a class="btn sm" href="/report.pdf?game=${x.id}" target="_blank">PDF</a><a class="btn sm" href="/report.pdf?game=${x.id}&dl=1">⬇</a>` : '<span class="kbd">en curso</span>';
+      return `<tr><td>#${x.id}</td><td>${d}</td><td><b>${x.home}</b> ${x.hs} - ${x.aw} <b>${x.away}</b></td><td>${link}</td></tr>`;
+    }).join('') : '<tr><td class="kbd">Todavía no hay juegos.</td></tr>';
+  }).catch(() => {});
+}
+
+function connect() {
+  ws = new WebSocket(`ws://${location.host}`);
+  ws.onopen = () => { $('#dot').classList.add('ok'); $('#status').textContent = 'Conectado'; loadLists(); };
+  ws.onclose = () => { $('#dot').classList.remove('ok'); $('#status').textContent = 'Reconectando…'; setTimeout(connect, 1000); };
+  let gt;
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.t === 'state') {
+      S = m.s; label = m.label;
+      clk = { g: S.game.ms, s: S.shot.ms, gr: S.game.running, sr: S.shot.running, tm: S.timer.ms, tr: S.timer.running, at: performance.now() };
+      paint();
+      clearTimeout(gt); gt = setTimeout(loadLists, 800);   // el historial cambia con el marcador
+    } else if (m.t === 'clock') clk = { g: m.g, s: m.s, gr: m.gr, sr: m.sr, tm: m.tm, tr: m.tr, at: performance.now() };
+    else if (m.t === 'lists') loadLists();
+  };
+}
+connect();
+</script>
+</body>
+</html>

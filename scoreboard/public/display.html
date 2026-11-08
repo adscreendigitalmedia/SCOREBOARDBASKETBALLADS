@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Scoreboard - Pantalla</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#fff;
+    font-family:"Arial Narrow","Segoe UI",Arial,sans-serif;font-weight:800}
+  html.transparent,html.transparent body,body.transparent{background:transparent}
+  #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;
+    display:grid;grid-template-rows:64px 250px 1fr;gap:10px;padding:10px;
+    background:linear-gradient(#060b2b,#000)}
+  body.transparent #stage{background:none}
+
+  /* barra superior = franja roja cuando suena la bocina (fin de periodo / 24 s / tiempo cumplido) */
+  .title{background:linear-gradient(#0a2fb8,#06196b);border-bottom:3px solid #fff;
+    display:flex;align-items:center;justify-content:center;font-size:36px;letter-spacing:2px}
+  /* contorno rojo alrededor de TODO el diseño (como las luces del tablero NBA) cuando suena la bocina */
+  .frame{position:absolute;inset:0;pointer-events:none;z-index:50;opacity:0;transition:opacity .12s;
+    border:16px solid #ff1414;
+    box-shadow:inset 0 0 0 3px #ff9a9a, inset 0 0 26px 4px rgba(255,20,20,.75)}
+  .frame.on{opacity:1}
+
+  .top{display:grid;grid-template-columns:1fr 300px 460px 300px 1fr;border-bottom:3px solid #fff}
+  .teamhead{background:linear-gradient(135deg,#0a2fb8,#1b4bff 60%,#0a2fb8);display:flex;align-items:center;justify-content:center}
+  .teamhead img{max-width:85%;max-height:85%;object-fit:contain}
+  .teamhead .ph{font-size:120px;opacity:.9}
+  .scorebox{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .sc{font-size:168px;line-height:1;font-variant-numeric:tabular-nums}
+  .qs{display:flex;gap:12px;margin-top:8px;min-height:44px}
+  .qs span{display:flex;flex-direction:column;align-items:center;line-height:1;font-size:30px;font-variant-numeric:tabular-nums}
+  .qs i{font-style:normal;font-size:17px;color:#9db4ff;margin-bottom:3px}
+
+  .mid{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .clockrow{display:flex;align-items:center;justify-content:center;gap:12px}
+  #gclock{font-size:104px;line-height:1;font-variant-numeric:tabular-nums}
+  /* flechas de posesión junto al reloj */
+  .tri{width:0;height:0;border-top:24px solid transparent;border-bottom:24px solid transparent}
+  .tri.l{border-right:36px solid #1a2250}
+  .tri.r{border-left:36px solid #1a2250}
+  .tri.l.on{border-right-color:#ffd400;filter:drop-shadow(0 0 10px #ffd400)}
+  .tri.r.on{border-left-color:#ffd400;filter:drop-shadow(0 0 10px #ffd400)}
+  #period{font-size:44px;line-height:1.05}
+  #period.final{color:#ff3b30}
+  #sclock{font-size:60px;line-height:1;color:#ffd400;font-variant-numeric:tabular-nums;min-height:60px}
+  #sclock.low{color:#ff3b30}
+  #gclock.tmode{color:#ffd400}
+  #gclock.tmode.low{color:#ff3b30}
+  .flash{animation:fl .25s steps(2) 6}
+  @keyframes fl{50%{background:#ff3b30;color:#fff}}
+
+  .bottom{display:grid;grid-template-columns:500px 1fr 500px;gap:10px;min-height:0}
+  .col{display:flex;flex-direction:column;gap:10px;min-height:0}
+  .panel{border:3px solid #fff;background:#000}
+  .panel h2{background:linear-gradient(#0a2fb8,#06196b);text-align:center;font-size:64px;height:76px;line-height:76px;border-bottom:3px solid #fff}
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
+  th{background:#0a2fb8;font-size:26px;height:46px;border:2px solid #1b4bff}
+  td{height:62px;border:2px solid #1b4bff;text-align:center;font-size:40px;font-variant-numeric:tabular-nums}
+  td.nm{text-align:left;padding-left:10px;font-size:28px;white-space:nowrap;overflow:hidden}
+  td.pn{line-height:1;padding:0}
+  td.pn b{display:block;font-size:34px;line-height:36px}
+  td.pn i{display:block;font-style:normal;font-size:16px;line-height:18px;letter-spacing:1px;color:#9db4ff}
+  td.nm sup{font-size:20px;margin-left:5px;opacity:.85;vertical-align:top;position:relative;top:6px}
+  td.pfw{color:#ffd400}
+  td.pfx{color:#ff3b30}
+  th.nm{width:38%}
+  th.pn{width:14%}
+  .foot{display:grid;grid-template-columns:1fr 1fr;height:68px;border-top:3px solid #fff}
+  .foot div{display:flex;align-items:center;justify-content:center;gap:16px;font-size:36px}
+  .foot div.bonus{background:#c8102e;animation:bn 1s steps(2) infinite}
+  @keyframes bn{50%{background:#8a0a20}}
+  .foot b{font-size:50px}
+  /* cuadro inferior: estadísticas de equipo (o nota de texto) */
+  .tbox{flex:1;min-height:0;border:3px solid #fff;background:#000;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:1fr 1fr;overflow:hidden}
+  .tbox.text{display:flex;align-items:center;justify-content:center;font-size:34px;text-align:center;padding:6px}
+  .cell{min-width:0;overflow:hidden;border:1px solid #1b4bff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+  .cell i{font-style:normal;font-size:17px;color:#9db4ff;margin-bottom:5px;white-space:nowrap}
+  .cell b{font-size:38px;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  .center{display:grid;grid-template-rows:1fr 150px;gap:10px;min-height:0}
+  .media{border:3px solid #fff;background:#000;position:relative;overflow:hidden}
+  .strip{border:3px solid #fff;background:#000}
+  body.cg .media,body.cg .strip{background:#00b140}
+  body.transparent .media,body.transparent .strip{background:transparent}
+
+  /* vistas del centro: líderes / comparativa / cronómetro */
+  .view{position:absolute;inset:0;display:flex;flex-direction:column;background:linear-gradient(#050a24,#000)}
+  .view h3{background:linear-gradient(#0a2fb8,#06196b);border-bottom:3px solid #fff;text-align:center;font-size:44px;height:64px;line-height:64px;letter-spacing:2px}
+  .vteams{display:grid;grid-template-columns:1fr 200px 1fr;height:56px;align-items:center;text-align:center;font-size:34px;background:#0a2fb8}
+  .vrows{flex:1;min-height:0;overflow:hidden;display:grid;grid-auto-rows:minmax(0,1fr)}
+  .vrow{display:grid;grid-template-columns:1fr 200px 1fr;align-items:center;text-align:center;border-bottom:2px solid #1b4bff}
+  .vrow:last-child{border-bottom:0}
+  .vrow .lab{font-size:26px;color:#9db4ff;white-space:nowrap}
+  .vrow .val{font-size:40px;line-height:1;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center;gap:12px}
+  .vrow .val small{font-size:22px;color:#9db4ff}
+  .vrow .val.lead{color:#ffd400}
+  .lrow .val{font-size:30px;gap:0}
+  .lrow .val b{font-size:56px;margin-left:12px;color:#ffd400;font-variant-numeric:tabular-nums}
+  .bar{width:680px;height:22px;background:#1a2250;border:2px solid #fff}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="title" id="title"></div>
+  <div class="top">
+    <div class="teamhead" id="hlogo"></div>
+    <div class="scorebox"><div class="sc" id="hscore">00</div><div class="qs" id="hqs"></div></div>
+    <div class="mid">
+      <div class="clockrow"><div class="tri l" id="phome"></div><div id="gclock">10:00</div><div class="tri r" id="paway"></div></div>
+      <div id="period">1 QT</div>
+      <div id="sclock">24</div>
+    </div>
+    <div class="scorebox"><div class="sc" id="ascore">00</div><div class="qs" id="aqs"></div></div>
+    <div class="teamhead" id="alogo"></div>
+  </div>
+  <div class="bottom">
+    <div class="col"><div class="panel" id="hpanel"></div><div class="tbox" id="hnote"></div></div>
+    <div class="center"><div class="media" id="media"></div><div class="strip"></div></div>
+    <div class="col"><div class="panel" id="apanel"></div><div class="tbox" id="anote"></div></div>
+  </div>
+  <div class="frame" id="frame"></div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const two = (n) => String(n).padStart(2, '0');
+const perLbl = (i) => (i <= 4 ? 'Q' + i : i === 5 ? 'OT' : (i - 4) + 'OT');
+const HORN_MS = 4000;
+let S = null, label = '1 QT';
+let clk = { g: 600000, s: 24000, gr: false, sr: false, tm: 0, tr: false, at: performance.now() };
+
+// ---- escalado a la ventana (stage fijo 1920x1080) ----
+function fit() { $('stage').style.transform = `scale(${Math.min(innerWidth / 1920, innerHeight / 1080)})`; }
+addEventListener('resize', fit); fit();
+
+// ---- tabla de jugadores ----
+function panel(t) {
+  const set = S.settings, lim = set.foulOut || 5;
+  const on = t.players.filter((p) => p.on).slice(0, 5);
+  while (on.length < 5) on.push(null);
+  const rows = on.map((p) => {
+    if (!p) return '<tr><td class="pn"></td><td class="nm"></td><td></td><td></td><td></td></tr>';
+    const cls = p.pf >= lim ? 'pfx' : (p.pf > 0 && p.pf >= lim - 1 ? 'pfw' : '');
+    const sup = p.pf > 0 ? `<sup>${p.pf}</sup>` : '';
+    return `<tr><td class="pn ${cls}"><b>${esc(p.n || '')}</b><i>${esc(p.pos || '')}</i></td><td class="nm ${cls}">${esc(p.name)}${sup}</td><td>${p.pts}</td><td>${p.reb}</td><td>${p.ast}</td></tr>`;
+  }).join('');
+  const bonus = t.fouls >= (set.foulBonus || 5);
+  return `<h2>${esc(t.name)}</h2>
+    <table><tr><th class="pn">#</th><th class="nm">JUGADOR</th><th>PTS</th><th>REB</th><th>AST</th></tr>${rows}</table>
+    <div class="foot"><div class="${bonus ? 'bonus' : ''}">${bonus ? 'BONUS' : 'FALTAS'} <b>${t.fouls}</b></div><div>TIEMPOS <b>${t.timeouts}</b></div></div>`;
+}
+
+// ---- estadísticas de equipo (REB y AST = suma de toda la plantilla) ----
+const pct = (m, a) => (a ? Math.round((m / a) * 100) + '%' : '--');
+function teamTotals(t) {
+  const st = t.stats || {}; const sum = (k) => t.players.reduce((n, p) => n + (p[k] || 0), 0);
+  return { reb: sum('reb'), ast: sum('ast'), stl: st.stl || 0, tov: st.tov || 0, blk: st.blk || 0,
+    fgm: (st.p2m || 0) + (st.p3m || 0), fga: (st.p2a || 0) + (st.p3a || 0), tpm: st.p3m || 0, tpa: st.p3a || 0, ftm: st.ftm || 0, fta: st.fta || 0 };
+}
+function statsBox(t) {
+  const x = teamTotals(t);
+  const cell = (l, v) => `<div class="cell"><i>${l}</i><b>${v}</b></div>`;
+  return cell('REBOTES', x.reb) + cell('ASIST.', x.ast) + cell('ROBOS', x.stl) + cell('PÉRDIDAS', x.tov) +
+    cell('TIROS ' + pct(x.fgm, x.fga), `${x.fgm}/${x.fga}`) + cell('3PT ' + pct(x.tpm, x.tpa), `${x.tpm}/${x.tpa}`) +
+    cell('LIBRES ' + pct(x.ftm, x.fta), `${x.ftm}/${x.fta}`) + cell('TAPONES', x.blk);
+}
+function bottomBox(el, t) {
+  const note = S.settings.bottom === 'note';
+  el.classList.toggle('text', note);
+  if (note) el.textContent = t.note; else el.innerHTML = statsBox(t);
+}
+
+// ---- vistas del centro ----
+function leader(t, k) {
+  let best = null;
+  for (const p of t.players) if (p.name && p[k] > 0 && (!best || p[k] > best[k])) best = p;
+  return best ? `<span class="val lrow"><span>${esc(best.name)}</span><b>${best[k]}</b></span>` : '<span class="val">—</span>';
+}
+function viewShell(title, rows) {
+  const H = S.teams.home, A = S.teams.away;
+  return `<div class="view"><h3>${title}</h3><div class="vteams"><span>${esc(H.name)}</span><span></span><span>${esc(A.name)}</span></div><div class="vrows">${rows}</div></div>`;
+}
+function leadersView() {
+  const H = S.teams.home, A = S.teams.away;
+  return viewShell('LÍDERES DEL JUEGO', [['PUNTOS', 'pts'], ['REBOTES', 'reb'], ['ASISTENCIAS', 'ast']]
+    .map(([l, k]) => `<div class="vrow lrow">${leader(H, k)}<span class="lab">${l}</span>${leader(A, k)}</div>`).join(''));
+}
+function compareView() {
+  const h = teamTotals(S.teams.home), a = teamTotals(S.teams.away);
+  const num = (l, k, lowerBetter) => {
+    const better = h[k] === a[k] ? 0 : ((h[k] > a[k]) !== !!lowerBetter ? 1 : 2);
+    return `<div class="vrow"><span class="val ${better === 1 ? 'lead' : ''}">${h[k]}</span><span class="lab">${l}</span><span class="val ${better === 2 ? 'lead' : ''}">${a[k]}</span></div>`;
+  };
+  const shoot = (l, m, at) => {
+    const hp = h[at] ? h[m] / h[at] : 0, ap = a[at] ? a[m] / a[at] : 0;
+    const cell = (t, p, lead) => `<span class="val ${lead ? 'lead' : ''}">${t[at] ? Math.round(p * 100) + '%' : '--'}<small>${t[m]}/${t[at]}</small></span>`;
+    return `<div class="vrow">${cell(h, hp, hp > ap)}<span class="lab">${l}</span>${cell(a, ap, ap > hp)}</div>`;
+  };
+  return viewShell('COMPARATIVA', num('REBOTES', 'reb') + num('ASISTENCIAS', 'ast') + num('ROBOS', 'stl') + num('PÉRDIDAS', 'tov', true) +
+    num('TAPONES', 'blk') + shoot('TIROS CAMPO', 'fgm', 'fga') + shoot('TRIPLES', 'tpm', 'tpa') + shoot('TIROS LIBRES', 'ftm', 'fta'));
+}
+
+function logo(t) {
+  return t.logo ? `<img src="${esc(t.logo)}" alt="">` : `<div class="ph">${esc(t.short || t.name.slice(0, 3))}</div>`;
+}
+function qsHTML(k) {
+  const a = S.periodScores[k] || []; let h = '';
+  for (let i = 0; i < Math.max(1, S.period); i++) h += `<span><i>${perLbl(i + 1)}</i>${a[i] || 0}</span>`;
+  return h;
+}
+
+function render() {
+  if (!S) return;
+  const set = S.settings;
+  document.documentElement.classList.toggle('transparent', set.center === 'transparent');
+  document.body.classList.toggle('transparent', set.center === 'transparent');
+  document.body.classList.toggle('cg', set.center === 'green');
+  $('title').textContent = set.title;
+  $('hlogo').innerHTML = logo(S.teams.home); $('alogo').innerHTML = logo(S.teams.away);
+  $('hscore').textContent = two(S.teams.home.score); $('ascore').textContent = two(S.teams.away.score);
+  $('hqs').innerHTML = qsHTML('home'); $('aqs').innerHTML = qsHTML('away');
+  $('hpanel').innerHTML = panel(S.teams.home); $('apanel').innerHTML = panel(S.teams.away);
+  bottomBox($('hnote'), S.teams.home); bottomBox($('anote'), S.teams.away);
+  $('phome').classList.toggle('on', S.possession === 'home');
+  $('paway').classList.toggle('on', S.possession === 'away');
+  $('period').textContent = S.timer.kind ? S.timer.label : S.final ? 'FINAL' : label;
+  $('period').classList.toggle('final', !!S.final);
+  const v = set.centerView;
+  $('media').innerHTML = v === 'leaders' ? leadersView() : v === 'compare' ? compareView() : '';
+}
+
+// ---- relojes: el servidor manda el valor, aquí se interpola para que sea fluido ----
+function fmtGame(ms) {
+  if (ms < 60000) return (Math.floor(ms / 100) / 10).toFixed(1);       // 59.9 ... 0.0
+  const s = Math.ceil(ms / 1000);
+  return Math.floor(s / 60) + ':' + two(s % 60);
+}
+function tick() {
+  const el = performance.now() - clk.at;
+  const g = Math.max(0, clk.g - (clk.gr ? el : 0));
+  const s = Math.max(0, clk.s - (clk.sr ? el : 0));
+  const T = S && S.timer && S.timer.kind ? S.timer : null;
+  $('gclock').classList.toggle('tmode', !!T);
+  if (T) {
+    // tiempo fuera / descanso: se muestra en el mismo reloj grande del juego
+    const tm = Math.max(0, clk.tm - (clk.tr ? el : 0)), sec = Math.ceil(tm / 1000);
+    $('gclock').textContent = Math.floor(sec / 60) + ':' + two(sec % 60);
+    $('gclock').classList.toggle('low', tm <= 10000);
+    $('sclock').textContent = T.team ? (S.teams[T.team].short || S.teams[T.team].name) : '';
+    $('sclock').classList.remove('low');
+  } else {
+    $('gclock').classList.remove('low');
+    $('gclock').textContent = fmtGame(g);
+    const show = S && S.settings.shotVisible && !(g > 0 && g < s);        // se apaga si el juego tiene menos que los 24
+    $('sclock').textContent = show ? (s < 5000 && s > 0 ? (Math.floor(s / 100) / 10).toFixed(1) : Math.ceil(s / 1000)) : '';
+    $('sclock').classList.toggle('low', s <= 5000);
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// ---- contorno rojo alrededor del diseño cuando suena la bocina (fin de periodo / 24 s / tiempo cumplido) ----
+function horn() {
+  const f = $('frame');
+  f.classList.add('on');
+  clearTimeout(horn.t);
+  horn.t = setTimeout(() => f.classList.remove('on'), HORN_MS);
+}
+
+// ---- WebSocket ----
+function connect() {
+  const ws = new WebSocket(`ws://${location.host}`);
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.t === 'state') {
+      S = m.s; label = m.label;
+      clk = { g: S.game.ms, s: S.shot.ms, gr: S.game.running, sr: S.shot.running, tm: S.timer.ms, tr: S.timer.running, at: performance.now() };
+      render();
+    } else if (m.t === 'clock') {
+      clk = { g: m.g, s: m.s, gr: m.gr, sr: m.sr, tm: m.tm, tr: m.tr, at: performance.now() };
+    } else if (m.t === 'horn') horn();
+  };
+  ws.onclose = () => setTimeout(connect, 1000);
+}
+connect();
+</script>
+</body>
+</html>
