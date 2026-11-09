@@ -63,6 +63,10 @@ function defaults() {
       otFoulsCarry: false,  // true = en tiempo extra siguen las faltas del 4to (regla FIBA); false = cada periodo empieza en 0
       foulOut: 5,           // faltas personales para eliminar al jugador (FIBA = 5, NBA = 6)
       timeoutMs: 60000,     // tiempo fuera (FIBA = 60 s)
+      // tiempos fuera disponibles por equipo (se recargan solos). FIBA: 2 / 3 / 1.  NBA: 7 / 0 / 2
+      toFirst: 2,           // al empezar el juego (1ra mitad)
+      toSecond: 3,          // al empezar el 3er periodo (0 = siguen los que queden)
+      toOT: 1,              // al empezar cada tiempo extra (0 = siguen los que queden)
       breakMs: 120000,      // descanso entre periodos
       halfMs: 900000,       // medio tiempo
       popupAuto: false,     // lanzar rótulo automáticamente al anotar
@@ -146,6 +150,11 @@ function startClocks() {
 function stopClocks() {
   S.game.running = false;
   if (S.settings.linkShot) S.shot.running = false;
+}
+// juego nuevo: cada equipo empieza con los tiempos de la 1ra mitad
+function resetTimeouts() {
+  const n = S.settings.toFirst > 0 ? S.settings.toFirst : 2;
+  S.teams.home.timeouts = n; S.teams.away.timeouts = n;
 }
 function startTimer(kind, label, tm, ms) {
   S.timer = { kind, label, team: tm, ms, total: ms, running: true, done: false };
@@ -247,7 +256,8 @@ function run(c) {
       const t = S.teams[c.team];
       if (!t || t.timeouts <= 0) return false;
       t.timeouts -= 1; stopClocks();
-      startTimer('timeout', 'TIEMPO FUERA', c.team, S.settings.timeoutMs);
+      // duración: la del comando (ms, para Stream Deck) o la elegida en el panel (15/30/60/75/90 s u otra)
+      startTimer('timeout', 'TIEMPO FUERA', c.team, num(c.ms) > 0 ? num(c.ms) : S.settings.timeoutMs);
       log(`Tiempo fuera ${abbr(c.team)}`, c.team);
       break;
     }
@@ -270,6 +280,9 @@ function run(c) {
       S.shot.ms = 24000; S.game.running = false; S.shot.running = false;
       // faltas de equipo (y BONUS) a 0 en cada periodo nuevo; opcional FIBA: en el OT siguen las del 4to
       if (S.period <= 4 || !S.settings.otFoulsCarry) { S.teams.home.fouls = 0; S.teams.away.fouls = 0; }
+      // tiempos fuera: recarga al empezar la 2da mitad y cada tiempo extra
+      { const n = S.period === 3 ? S.settings.toSecond : S.period > 4 ? S.settings.toOT : 0;
+        if (n > 0) { S.teams.home.timeouts = n; S.teams.away.timeouts = n; } }
       ensurePeriods(); undoStack.length = 0;
       log(`Inicio ${periodLabel(S.period)}`);
       break;
@@ -285,9 +298,9 @@ function run(c) {
         store.updateGame(gameId, {
           home: S.teams.home.name, away: S.teams.away.name, hs: S.teams.home.score, aw: S.teams.away.score, ended: Date.now(), final: S,
         });
-        const keep = S.settings; S = defaults(); S.settings = keep; S.game.ms = keep.periodMs;
+        const keep = S.settings; S = defaults(); S.settings = keep; S.game.ms = keep.periodMs; resetTimeouts();
         gameId = store.newGame({ home: S.teams.home.name, away: S.teams.away.name });
-      } else { const keep = S.settings; S = defaults(); S.settings = keep; S.game.ms = keep.periodMs; }
+      } else { const keep = S.settings; S = defaults(); S.settings = keep; S.game.ms = keep.periodMs; resetTimeouts(); }
       events = []; undoStack.length = 0;
       break;
     }

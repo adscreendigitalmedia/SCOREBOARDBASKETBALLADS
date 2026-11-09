@@ -83,7 +83,16 @@
   <div class="row" style="margin-top:8px">
     <span>Tiempo fuera:</span>
     <button class="big" data-c='{"a":"timeoutStart","team":"home"}'>Local (<b data-bind="teams.home.timeouts"></b>)</button>
+    <button class="sm" title="Quitar un tiempo al local" data-c='{"a":"inc","path":"teams.home.timeouts","by":-1}'>−</button>
+    <button class="sm" title="Devolver un tiempo al local" data-c='{"a":"inc","path":"teams.home.timeouts","by":1}'>+</button>
     <button class="big" data-c='{"a":"timeoutStart","team":"away"}'>Visitante (<b data-bind="teams.away.timeouts"></b>)</button>
+    <button class="sm" title="Quitar un tiempo al visitante" data-c='{"a":"inc","path":"teams.away.timeouts","by":-1}'>−</button>
+    <button class="sm" title="Devolver un tiempo al visitante" data-c='{"a":"inc","path":"teams.away.timeouts","by":1}'>+</button>
+    <label style="margin:0">Duración
+      <select data-path="settings.timeoutMs" data-type="sec" title="Duración del próximo tiempo fuera">
+        <option value="15">15 s</option><option value="30">30 s</option><option value="60">60 s</option><option value="75">75 s</option><option value="90">90 s</option>
+      </select>
+    </label>
     <span style="margin-left:12px">Descanso:</span>
     <button data-c='{"a":"breakStart","kind":"q"}'>Entre periodos</button>
     <button data-c='{"a":"breakStart","kind":"half"}'>Medio tiempo</button>
@@ -110,7 +119,8 @@
   </div>
 </section>
 
-<section class="wide" data-rol="jugada">
+<!-- rótulo de anotación oculto (no se usa); para volver a mostrarlo quita "hidden" y data-off -->
+<section class="wide" data-rol="jugada" data-off hidden>
   <h3>Rótulo de anotación (popup.html)</h3>
   <div class="row">
     <div style="width:90px"><label>Texto grande</label><input type="text" id="p1" value="+3"></div>
@@ -172,7 +182,9 @@
     <div><label>Tiempo fuera (segundos)</label><input type="number" data-path="settings.timeoutMs" data-type="sec"></div>
     <div><label>Descanso entre periodos (min)</label><input type="number" data-path="settings.breakMs" data-type="min"></div>
     <div><label>Medio tiempo (min)</label><input type="number" data-path="settings.halfMs" data-type="min"></div>
-    <div><label>Duración del rótulo (seg)</label><input type="number" data-path="settings.popupMs" data-type="sec"></div>
+    <div><label>Tiempos fuera al empezar el juego (FIBA 2, NBA 7)</label><input type="number" min="1" data-path="settings.toFirst" data-type="int"></div>
+    <div><label>Tiempos fuera al empezar el 3er periodo (FIBA 3, NBA 0 = siguen los que queden)</label><input type="number" min="0" data-path="settings.toSecond" data-type="int"></div>
+    <div><label>Tiempos fuera en cada tiempo extra (FIBA 1, NBA 2)</label><input type="number" min="0" data-path="settings.toOT" data-type="int"></div>
   </div>
   <div class="row" style="margin-top:6px">
     <label style="margin:0"><input type="checkbox" data-path="settings.linkShot" data-type="bool"> 24s ligado al reloj del juego</label>
@@ -348,7 +360,11 @@ function paint() {
     const v = get(el.dataset.path); const ty = el.dataset.type;
     if (ty === 'bool') el.checked = !!v;
     else if (ty === 'min') el.value = v / 60000;
-    else if (ty === 'sec') el.value = v / 1000;
+    else if (ty === 'sec') {
+      // en un selector, si el valor es personalizado (p. ej. 45 s desde Ajustes) se agrega como opción
+      if (el.tagName === 'SELECT' && ![...el.options].some((o) => +o.value === v / 1000)) el.add(new Option(v / 1000 + ' s', v / 1000));
+      el.value = v / 1000;
+    }
     else el.value = v ?? '';
   });
   $('#plabel').textContent = S.final ? 'FINAL' : label;

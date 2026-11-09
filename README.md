@@ -41,7 +41,8 @@ Si la otra PC no conecta: abre el puerto 8080 en el firewall de Windows y verifi
 - **Relojes:** juego y 24 s con atajos (`Espacio`, `1`=24, `2`=14, `S`=parar 24). El servidor lleva el tiempo, así control y pantalla siempre coinciden. **El reloj de 24 se apaga solo** cuando al juego le quedan menos de 24 s (se oculta en pantalla, deja de contar y no suena la violación); se cambia en Ajustes (*Apagar 24 con menos de … s*, 0 = nunca).
 - **Contorno rojo:** al llegar a 0 el reloj del juego, los 24 s o un cronómetro, se enciende un contorno rojo alrededor de todo el diseño (como las luces del tablero en la NBA) durante 4 s. El botón *Probar contorno rojo* lo dispara a mano.
 - **Posesión:** flechas junto al reloj (`P` alterna).
-- **Tiempo fuera:** botón por equipo; descuenta el tiempo, para los relojes y muestra la cuenta regresiva de 60 s en el mismo reloj grande del juego (en amarillo, rojo en los últimos 10 s), con "TIEMPO FUERA" y el equipo en lugar del periodo y los 24 s; el centro de la pantalla no se toca. También descansos y medio tiempo. *Cancelar y devolver* restaura el tiempo fuera si se tocó por error.
+- **Tiempos fuera disponibles:** junto a cada botón hay **−/+** para corregir. Se recargan solos según la liga (Ajustes): al empezar el juego, al empezar el 3er periodo y en cada tiempo extra (FIBA 2/3/1, NBA 7/0/2; 0 = siguen los que queden).
+- **Tiempo fuera:** botón por equipo; descuenta el tiempo, para los relojes y muestra la cuenta regresiva de 60 s en el mismo reloj grande del juego (en amarillo, rojo en los últimos 10 s), con "TIEMPO FUERA" y el equipo en lugar del periodo y los 24 s; el centro de la pantalla no se toca. La **duración** se elige junto a los botones (15, 30, 60, 75 o 90 s) o se escribe otra en Ajustes; por API: `/api/cmd?a=timeoutStart&team=home&ms=30000`. También descansos y medio tiempo. *Cancelar y devolver* restaura el tiempo fuera si se tocó por error.
 - **Faltas y bonus:** en Ajustes pones con cuántas faltas de equipo en el periodo se enciende **BONUS** en rojo (FIBA 4, NBA 5). Al pasar al siguiente periodo las faltas de equipo vuelven a 0 y el BONUS se apaga, también en tiempo extra (si prefieres la regla FIBA de seguir con las faltas del 4to en el OT, marca *En tiempo extra seguir las faltas del 4to*). El jugador se marca en amarillo a una falta de eliminarse y en rojo al eliminarse (FIBA 5, NBA 6, se cambia en Ajustes).
 - **Orden de jugadores:** en la pantalla los 5 en cancha se ordenan de mayor a menor puntos (con igual puntaje, el orden de la plantilla). Un jugador que entra por sustitución queda según sus puntos, no abajo. Se apaga en Ajustes.
 - **Marcador por periodo** (Q1, Q2, Q3, Q4, OT) bajo cada marcador.
@@ -92,7 +93,8 @@ El borde blanco de 3 px de cada caja está dentro de esas medidas.
 ## Resumen del juego en PDF
 Botón **Ver PDF del juego actual** en el control, o `http://IP:8080/report.pdf`. Incluye marcador, puntos por periodo, comparativa de equipos, líderes, estadísticas por jugador y jugada a jugada. Los juegos terminados quedan en el **Historial** con su PDF (`/report.pdf?game=1`).
 
-## Rótulos de anotación (para Resolume)
+## Rótulos de anotación (para Resolume) — oculto en el panel
+La sección está oculta en el panel porque no se usa; `popup.html` y la API siguen funcionando. Para mostrarla, en `control.html` quita `hidden` de la sección *Rótulo de anotación*.
 `popup.html` es una página con fondo transparente que anima un rótulo (ej. "+3 G. TORRES") y lo oculta sola.
 
 - **Cómo dispararlo:** botón *Lanzar rótulo* del control, automático al anotar (casilla en el control), o por HTTP: `/api/cmd?a=popup&l1=%2B3&l2=G.%20TORRES&l3=PONCE&team=home` (sirve para Stream Deck o Companion).

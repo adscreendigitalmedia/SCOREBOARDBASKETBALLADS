@@ -62,15 +62,23 @@
   td{height:62px;border:2px solid #1b4bff;text-align:center;font-size:40px;font-variant-numeric:tabular-nums}
   td.nm{text-align:left;padding-left:10px;font-size:28px;white-space:nowrap;overflow:hidden}
   td.pn{line-height:1;padding:0}
-  td.pn b{display:block;font-size:34px;line-height:36px}
-  td.pn i{display:block;font-style:normal;font-size:16px;line-height:18px;letter-spacing:1px;color:#9db4ff}
-  td.nm sup{font-size:20px;margin-left:5px;opacity:.85;vertical-align:top;position:relative;top:6px}
+  td.pn b{display:block;font-size:30px;line-height:34px}
+  td.pn i{display:block;font-style:normal;font-size:14px;line-height:16px;letter-spacing:0;color:#9db4ff}
+  /* nombre + faltas: el número de faltas tiene su espacio fijo a la derecha; si el nombre es largo se recorta con "…" */
+  td.nm{padding-right:6px}
+  td.nm .nmw{display:flex;align-items:center;gap:6px;min-width:0}
+  td.nm .nmt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  td.nm .nmt.wrap{white-space:normal;text-overflow:clip;line-height:1.02;overflow-wrap:anywhere}
+  td.nm .pf{flex:none;min-width:26px;height:26px;line-height:26px;padding:0 5px;border-radius:13px;font-size:19px;text-align:center;
+    background:rgba(255,255,255,.18);color:#fff;font-variant-numeric:tabular-nums}
+  td.nm.pfw .pf{background:#ffd400;color:#000}
+  td.nm.pfx .pf{background:#ff3b30;color:#fff}
   td.pfw{color:#ffd400}
   td.pfx{color:#ff3b30}
-  /* columnas de la plantilla: #+jugador 210px, PTS 86, REB 86, AST 71 */
-  th.nm{width:33.4%}
-  th.pn{width:13%}
-  th.c{width:19%}
+  /* columnas: # 10%, PTS/REB/AST 13% cada una, el nombre se queda con el resto (~51%) */
+  th.pn{width:10%}
+  th.c{width:13%;font-size:22px}
+  td.c{font-size:34px}
   .foot{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0;border-top:3px solid #fff}
   .foot div{display:flex;align-items:center;justify-content:center;gap:16px;font-size:36px}
   .foot div.bonus{background:#c8102e;animation:bn 1s steps(2) infinite}
@@ -161,14 +169,14 @@ function panel(t) {
   if (set.sortByPts !== false) on.sort((a, b) => b.pts - a.pts);   // orden estable: con los mismos puntos conserva el orden de la plantilla
   while (on.length < 5) on.push(null);
   const rows = on.map((p) => {
-    if (!p) return '<tr><td class="pn"></td><td class="nm"></td><td></td><td></td><td></td></tr>';
+    if (!p) return '<tr><td class="pn"></td><td class="nm"></td><td class="c"></td><td class="c"></td><td class="c"></td></tr>';
     const cls = p.pf >= lim ? 'pfx' : (p.pf > 0 && p.pf >= lim - 1 ? 'pfw' : '');
-    const sup = p.pf > 0 ? `<sup>${p.pf}</sup>` : '';
-    return `<tr><td class="pn ${cls}"><b>${esc(p.n || '')}</b><i>${esc(p.pos || '')}</i></td><td class="nm ${cls}">${esc(p.name)}${sup}</td><td>${p.pts}</td><td>${p.reb}</td><td>${p.ast}</td></tr>`;
+    const pf = p.pf > 0 ? `<span class="pf">${p.pf}</span>` : '';
+    return `<tr><td class="pn ${cls}"><b>${esc(p.n || '')}</b><i>${esc(p.pos || '')}</i></td><td class="nm ${cls}"><div class="nmw"><span class="nmt">${esc(p.name)}</span>${pf}</div></td><td class="c">${p.pts}</td><td class="c">${p.reb}</td><td class="c">${p.ast}</td></tr>`;
   }).join('');
   const bonus = t.fouls >= (set.foulBonus || 4);
   return `<h2>${esc(t.name)}</h2>
-    <table><tr><th class="pn">#</th><th class="nm">JUGADOR</th><th class="c">PTS</th><th class="c">REB</th><th>AST</th></tr>${rows}</table>
+    <table><tr><th class="pn">#</th><th class="nm">JUGADOR</th><th class="c">PTS</th><th class="c">REB</th><th class="c">AST</th></tr>${rows}</table>
     <div class="foot"><div class="${bonus ? 'bonus' : ''}">${bonus ? 'BONUS' : 'FALTAS'} <b>${t.fouls}</b></div><div>TIEMPOS <b>${t.timeouts}</b></div></div>`;
 }
 
@@ -231,6 +239,23 @@ function qsHTML(k) {
   return h;
 }
 
+// ---- nombres completos: la letra se achica hasta que el nombre cabe; si no cabe en una línea, pasa a dos ----
+function fitNames() {
+  for (const el of document.querySelectorAll('td.nm .nmt')) {
+    el.classList.remove('wrap');
+    let size = 28; el.style.fontSize = size + 'px';
+    while (el.scrollWidth > el.clientWidth && size > 18) el.style.fontSize = --size + 'px';
+    if (el.scrollWidth <= el.clientWidth) continue;
+    el.classList.add('wrap');                      // dos líneas dentro de la fila de 62 px
+    size = 24; el.style.fontSize = size + 'px';
+    while ((el.scrollHeight > 56 || el.scrollWidth > el.clientWidth) && size > 14) el.style.fontSize = --size + 'px';
+  }
+  for (const h of document.querySelectorAll('.panel h2')) {   // nombre del equipo en la cabecera del panel
+    let size = 56; h.style.fontSize = size + 'px';
+    while (h.scrollWidth > h.clientWidth && size > 28) h.style.fontSize = --size + 'px';
+  }
+}
+
 const LAYER = new URLSearchParams(location.search).get('layer') || '';   // '' | base | stats
 function render() {
   if (!S) return;
@@ -255,6 +280,7 @@ function render() {
   $('hqs').innerHTML = qsHTML('home'); $('aqs').innerHTML = qsHTML('away');
   $('hpanel').innerHTML = panel(S.teams.home); $('apanel').innerHTML = panel(S.teams.away);
   bottomBox($('hnote'), S.teams.home); bottomBox($('anote'), S.teams.away);
+  fitNames();
   $('phome').classList.toggle('on', S.possession === 'home');
   $('paway').classList.toggle('on', S.possession === 'away');
   $('period').textContent = S.timer.kind ? S.timer.label : S.final ? 'FINAL' : label;
