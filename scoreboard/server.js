@@ -13,9 +13,10 @@ const PORT = process.env.PORT || 8080;
 const PUBLIC = path.join(__dirname, 'public');
 
 // ---------- Estado ----------
-const player = (n = '', name = '', on = false) => ({ n, name, pts: 0, reb: 0, ast: 0, pf: 0, on });
+const player = (n = '', name = '', on = false, pos = '') => ({ n, name, pos, pts: 0, reb: 0, ast: 0, pf: 0, on });
+const POS = ['PG', 'SG', 'SF', 'PF', 'C'];   // posiciones de ejemplo para los 5 iniciales
 const roster = (names) =>
-  Array.from({ length: 12 }, (_, i) => (names[i] ? player(String(i + 4), names[i], true) : player()));
+  Array.from({ length: 12 }, (_, i) => (names[i] ? player(String(i + 4), names[i], true, POS[i] || '') : player()));
 const team = (name, short, names) => ({
   name, short, logo: '', score: 0, fouls: 0, timeouts: 3, note: '', players: roster(names),
   // estadísticas de equipo (REB y AST se suman solos desde los jugadores)
@@ -42,6 +43,19 @@ function defaults() {
       otMs: 300000,
       linkShot: true,       // el reloj de 24 corre/para junto con el del juego
       shotVisible: true,
+      sortByPts: true,      // en pantalla, los jugadores en cancha van de mayor a menor puntos
+      shotOffMs: 24000,     // el reloj de 24 se apaga solo cuando al juego le quedan menos de estos ms (0 = nunca)
+      bgImage: '',          // imagen de fondo/diseño (PNG 1920x1080) subida desde el panel
+      bgOnly: false,        // true = ocultar los colores de las cajas y usar solo la imagen
+      // colores de las vistas del centro (Líderes / Comparativa), editables desde el panel
+      viewBg: '#050a24',    // fondo
+      viewHead: '#0a2fb8',  // franja del título (LÍDERES DEL JUEGO / COMPARATIVA)
+      viewTeams: '#0a2fb8', // franja con los nombres de los equipos
+      viewLine: '#1b4bff',  // líneas entre filas
+      viewLabel: '#9db4ff', // texto de las etiquetas (PUNTOS, REBOTES...)
+      viewLead: '#ffd400',  // el valor que va ganando
+      viewText: '#ffffff',  // resto del texto
+      viewClear: false,     // true = sin fondos (se ve la imagen de fondo / plantilla)
       center: 'black',      // black | transparent | green
       bottom: 'stats',      // cuadro inferior de cada equipo: stats | note
       centerView: 'none',   // none | leaders | compare
@@ -138,10 +152,11 @@ function startTimer(kind, label, tm, ms) {
 
 // ---------- Deshacer (solo marcador/estadísticas, no relojes) ----------
 const undoStack = [];
-const snapshot = () => JSON.stringify({ teams: S.teams, period: S.period, periodScores: S.periodScores, possession: S.possession, final: S.final });
+// El deshacer solo toca marcador, faltas y estadisticas (no tiempos fuera, posesion ni periodo): asi varios operadores no se pisan.
+const snapshot = () => JSON.stringify({ teams: S.teams, periodScores: S.periodScores });
 function undoable(c) {
   if (c.a === 'set' || c.a === 'inc') return String(c.path).startsWith('teams.');
-  return ['playerStat', 'shot', 'possession', 'possessionToggle', 'loadTeam', 'importRoster'].includes(c.a);
+  return ['playerStat', 'shot', 'loadTeam', 'importRoster'].includes(c.a);
 }
 
 // ---------- Rótulos (popup.html) ----------
@@ -154,17 +169,19 @@ function parseRoster(text) {
   const out = [];
   for (const raw of String(text || '').split(/\r?\n/)) {
     const line = raw.trim(); if (!line) continue;
-    let n = '', name = line;
+    let n = '', name = line, pos = '';
     const sep = line.match(/^([^,;\t]+)[,;\t]\s*(.+)$/);
     if (sep && /^\d{1,3}$/.test(sep[1].trim())) { n = sep[1].trim(); name = sep[2].trim(); }
     else { const sp = line.match(/^(\d{1,3})\s+(.+)$/); if (sp) { n = sp[1]; name = sp[2]; } }
-    out.push({ n, name });
+    const pp = name.match(/^(.+?)\s*[,;\t]\s*([A-Za-z]{1,3})$/);     // "4, G. Torres, PG"
+    if (pp) { name = pp[1].trim(); pos = pp[2].toUpperCase(); }
+    out.push({ n, name, pos });
     if (out.length === 12) break;
   }
   return out;
 }
 function fillRoster(t, list) {
-  t.players = Array.from({ length: 12 }, (_, i) => (list[i] ? player(list[i].n || '', list[i].name || '', i < 5) : player()));
+  t.players = Array.from({ length: 12 }, (_, i) => (list[i] ? player(list[i].n || '', list[i].name || '', i < 5, list[i].pos || '') : player()));
   t.stats = defaults().teams.home.stats;
 }
 
@@ -276,7 +293,8 @@ function run(c) {
       const snap = undoStack.pop();
       if (!snap) return false;
       const o = JSON.parse(snap);
-      S.teams = o.teams; S.period = o.period; S.periodScores = o.periodScores; S.possession = o.possession; S.final = o.final;
+      for (const k of ['home', 'away']) { const keep = S.teams[k].timeouts; S.teams[k] = o.teams[k]; S.teams[k].timeouts = keep; }
+      S.periodScores = o.periodScores;
       log('Deshacer ultima accion');
       break;
     }
@@ -287,7 +305,7 @@ function run(c) {
     // ---- plantillas (base de datos) ----
     case 'saveTeam': {
       const t = S.teams[c.team]; if (!t || !t.name) return false;
-      store.saveTeam({ name: t.name, short: t.short, logo: t.logo, players: t.players.map((p) => ({ n: p.n, name: p.name, on: p.on })) });
+      store.saveTeam({ name: t.name, short: t.short, logo: t.logo, players: t.players.map((p) => ({ n: p.n, name: p.name, pos: p.pos || '', on: p.on })) });
       broadcast({ t: 'lists' });
       break;
     }
@@ -295,7 +313,7 @@ function run(c) {
       const t = S.teams[c.team]; const r = store.getTeam(num(c.id));
       if (!t || !r) return false;
       t.name = r.name; t.short = r.short || ''; t.logo = r.logo || '';
-      t.players = Array.from({ length: 12 }, (_, i) => { const p = r.players[i]; return p ? player(p.n || '', p.name || '', !!p.on) : player(); });
+      t.players = Array.from({ length: 12 }, (_, i) => { const p = r.players[i]; return p ? player(p.n || '', p.name || '', !!p.on, p.pos || '') : player(); });
       t.stats = defaults().teams.home.stats;
       break;
     }
@@ -399,6 +417,25 @@ const server = http.createServer((req, res) => {
     return finish(Object.fromEntries(url.searchParams)); // GET /api/cmd?a=gameToggle
   }
 
+  // Subir logos / fondo desde el panel: POST /api/upload?kind=logo|bg&ext=png&team=home  (cuerpo = archivo)
+  if (url.pathname === '/api/upload' && req.method === 'POST') {
+    const dir = { logo: 'logos', bg: 'bg' }[url.searchParams.get('kind')];
+    const ext = String(url.searchParams.get('ext') || '').toLowerCase().replace(/[^a-z]/g, '');
+    if (!dir || !['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'].includes(ext)) return json(res, { ok: false, error: 'tipo no permitido' }, 400);
+    const chunks = []; let size = 0, dead = false;
+    req.on('data', (d) => { size += d.length; if (size > 12e6) { dead = true; json(res, { ok: false, error: 'archivo mayor a 12 MB' }, 413); req.destroy(); } else chunks.push(d); });
+    return req.on('end', () => {
+      if (dead) return;
+      const tag = String(url.searchParams.get('team') || url.searchParams.get('kind')).replace(/[^a-z]/gi, '').slice(0, 12) || 'img';
+      const name = `${tag}-${Date.now()}.${ext}`;
+      try {
+        fs.mkdirSync(path.join(PUBLIC, dir), { recursive: true });
+        fs.writeFileSync(path.join(PUBLIC, dir, name), Buffer.concat(chunks));
+      } catch (e) { return json(res, { ok: false, error: e.message }, 500); }
+      json(res, { ok: true, path: `/${dir}/${name}` });
+    });
+  }
+
   // Resumen del juego en PDF (juego actual o uno del historial: /report.pdf?game=3)
   if (url.pathname === '/report.pdf') {
     const gid = num(url.searchParams.get('game')) || gameId;
@@ -447,7 +484,8 @@ let lastTick = Date.now(); let lastClock = 0;
 setInterval(() => {
   const now = Date.now(); const dt = now - lastTick; lastTick = now;
   if (S.game.running) S.game.ms = Math.max(0, S.game.ms - dt);
-  if (S.shot.running) S.shot.ms = Math.max(0, S.shot.ms - dt);
+  const shotOff = S.settings.shotOffMs > 0 && S.game.ms < S.settings.shotOffMs;   // menos de 24 s de juego: reloj de 24 apagado
+  if (S.shot.running && !shotOff) S.shot.ms = Math.max(0, S.shot.ms - dt);
   if (S.timer.running) S.timer.ms = Math.max(0, S.timer.ms - dt);
 
   let changed = false;
@@ -455,7 +493,7 @@ setInterval(() => {
     S.game.running = false; S.shot.running = false; changed = true;
     log(`Fin de ${periodLabel(S.period)}`);
     broadcast({ t: 'horn', k: 'game' });
-  } else if (S.shot.running && S.shot.ms === 0) {
+  } else if (S.shot.running && !shotOff && S.shot.ms === 0) {
     S.shot.running = false; if (S.settings.linkShot) S.game.running = false;
     changed = true; log('Violacion de 24 segundos');
     broadcast({ t: 'horn', k: 'shot' });

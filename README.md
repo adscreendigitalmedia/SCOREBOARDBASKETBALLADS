@@ -12,7 +12,8 @@ scoreboard/
     control.html   panel de la mesa / operador
     display.html   la pantalla (para OBS)
     popup.html     rótulos de anotación (para OBS, capa aparte)
-    logos/         pon aquí los logos (ej. ponce.png)
+    logos/         logos subidos desde el panel (o ponlos a mano)
+    bg/            fondo subido desde el panel
 ```
 
 ## Arranque (PC servidor)
@@ -37,15 +38,53 @@ Si la otra PC no conecta: abre el puerto 8080 en el firewall de Windows y verifi
 4. Si tu pared LED P3.91 no es 16:9, dime la resolución total en píxeles y adapto el diseño.
 
 ## Lo que hace el panel de control
-- **Relojes:** juego y 24 s con atajos (`Espacio`, `1`=24, `2`=14, `S`=parar 24). El servidor lleva el tiempo, así control y pantalla siempre coinciden.
+- **Relojes:** juego y 24 s con atajos (`Espacio`, `1`=24, `2`=14, `S`=parar 24). El servidor lleva el tiempo, así control y pantalla siempre coinciden. **El reloj de 24 se apaga solo** cuando al juego le quedan menos de 24 s (se oculta en pantalla, deja de contar y no suena la violación); se cambia en Ajustes (*Apagar 24 con menos de … s*, 0 = nunca).
 - **Contorno rojo:** al llegar a 0 el reloj del juego, los 24 s o un cronómetro, se enciende un contorno rojo alrededor de todo el diseño (como las luces del tablero en la NBA) durante 4 s. El botón *Probar contorno rojo* lo dispara a mano.
 - **Posesión:** flechas junto al reloj (`P` alterna).
 - **Tiempo fuera:** botón por equipo; descuenta el tiempo, para los relojes y muestra la cuenta regresiva de 60 s en el mismo reloj grande del juego (en amarillo, rojo en los últimos 10 s), con "TIEMPO FUERA" y el equipo en lugar del periodo y los 24 s; el centro de la pantalla no se toca. También descansos y medio tiempo. *Cancelar y devolver* restaura el tiempo fuera si se tocó por error.
 - **Faltas y bonus** (reglas FIBA por defecto, configurables en Ajustes): con 5 faltas de equipo en el periodo el recuadro pasa a **BONUS** en rojo; el jugador se marca en amarillo con 4 faltas y en rojo con 5 (eliminado). Las faltas de equipo se reinician cada periodo y en el tiempo extra continúan las del 4to, como en FIBA. Para NBA pon 6 faltas para eliminar.
+- **Orden de jugadores:** en la pantalla los 5 en cancha se ordenan de mayor a menor puntos (con igual puntaje, el orden de la plantilla). Un jugador que entra por sustitución queda según sus puntos, no abajo. Se apaga en Ajustes.
 - **Marcador por periodo** (Q1, Q2, Q3, Q4, OT) bajo cada marcador.
-- **Deshacer** (`Z`): revierte la última acción de marcador/estadísticas (no mueve los relojes).
+- **Deshacer** (`Z`): revierte la última acción de marcador, faltas o estadísticas. No toca relojes, posesión, periodo ni tiempos fuera, para que varios operadores no se pisen.
 - **Vistas del centro:** líderes del juego y comparativa de equipos.
 - **FINAL:** marca el juego como terminado y lo guarda.
+
+## Roles: varias personas en la mesa
+Cada operador abre el mismo panel con su rol (cada rol solo muestra lo suyo y sus atajos). Sin `?rol=` se ve todo.
+
+| Rol | URL | Qué maneja |
+|---|---|---|
+| Relojes | `/control.html?rol=relojes` | reloj de juego, 24 s, 14 s, periodos (`Espacio`, `1`, `2`, `S`) |
+| Anotación | `/control.html?rol=anotacion` | marcador, faltas, estadísticas, plantillas en cancha, deshacer (`Z`) |
+| Jugada y pantalla | `/control.html?rol=jugada` | posesión (`P`), tiempos fuera, descansos, FINAL, vista del centro, rótulos |
+| Ajustes | `/control.html?rol=admin` | logos, fondo, plantillas, PDF, reglas (se usa antes del juego) |
+
+Recomendación: en juegos grandes, 3 personas (relojes, anotación, jugada); si solo hay 2, junta *Jugada* con *Relojes*; con 1 persona usa la vista completa. Los tres paneles se pueden abrir en tablets distintas sin instalar nada.
+
+## Logos y fondo (sin tocar archivos)
+En el panel (rol *Anotación* o *Ajustes*): **Logo del equipo → Elegir archivo** (PNG con fondo transparente, cuadrado o apaisado; se ajusta solo). **Fondo / diseño de la pantalla → Elegir archivo** (PNG 1920×1080). Con *Usar solo mi imagen* se quitan los colores de las cajas y se ve tu diseño con los textos encima. Los archivos se guardan en `public/logos/` y `public/bg/`. La guía `guia-medidas.png` marca dónde cae cada zona para que tu PNG coincida.
+
+## Estadísticas del centro por encima de los anuncios (capas en Resolume)
+Si los anuncios están en una capa por encima del scoreboard, las estadísticas del centro quedan tapadas. Solución: dos fuentes de OBS, cada una con su salida NDI:
+- `display.html?layer=base` → todo el scoreboard menos las estadísticas del centro (el centro queda transparente).
+- `display.html?layer=stats` → solo las estadísticas del centro (todo lo demás transparente).
+
+Orden en Resolume, de abajo hacia arriba: `base` → anuncios → `stats` → `popup`. Las estadísticas (líderes/comparativa) salen siempre sobre los anuncios, y cuando el centro está en *Ninguna* la capa `stats` es invisible y se ven los anuncios. En OBS, a cada fuente de navegador ponle el filtro **Dedicated NDI Output**.
+
+## Medidas de la pantalla (lienzo 1920×1080 px)
+| Zona | x | y | ancho | alto |
+|---|---|---|---|---|
+| Centro (estadísticas / anuncios) | 525 | 347 | 870 | 560 |
+| Franja inferior de anuncios | 525 | 923 | 870 | 137 |
+| Equipo local (tabla) | 25 | 347 | 482 | 503 |
+| Equipo local (estadísticas) | 25 | 867 | 482 | 193 |
+| Equipo visitante | 1413 | 347 | 482 | 713 |
+| Marcador superior | 25 | 87 | 1870 | 243 |
+| Título | 25 | 18 | 1870 | 52 |
+
+Las medidas coinciden con la plantilla `led_scoreboard_layout_vacio.png`: súbela como fondo en el panel y marca *Usar solo mi imagen*.
+
+El borde blanco de 3 px de cada caja está dentro de esas medidas.
 
 ## Base de datos (SQLite)
 `scoreboard.db` guarda automáticamente: el estado del juego (si se cierra el servidor, al abrir sigue donde iba), el historial de juegos, la jugada a jugada, y las **plantillas de equipos** (botones *Guardar actual / Cargar / Borrar*, o pega una lista `4, G. Torres, PG` por línea (número, nombre y posición opcional) con *Importar*). Para respaldar todo, copia `scoreboard.db`.

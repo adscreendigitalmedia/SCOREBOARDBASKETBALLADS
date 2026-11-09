@@ -1,0 +1,8 @@
+.DS_Store
+scoreboard.db
+scoreboard.db-*
+data.json
+node_modules/
+public/logos/*
+!public/logos/.gitkeep
+public/bg/

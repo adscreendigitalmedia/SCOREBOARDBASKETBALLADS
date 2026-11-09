@@ -9,7 +9,8 @@
     font-family:"Arial Narrow","Segoe UI",Arial,sans-serif;font-weight:800}
   html.transparent,html.transparent body,body.transparent{background:transparent}
   #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;
-    display:grid;grid-template-rows:64px 250px 1fr;gap:10px;padding:10px;
+    /* medidas = plantilla led_scoreboard_layout_vacio.png (1920x1080) */
+    display:grid;grid-template-rows:52px 243px 713px;row-gap:17px;padding:18px 25px 20px;
     background:linear-gradient(#060b2b,#000)}
   body.transparent #stage{background:none}
 
@@ -22,10 +23,12 @@
     box-shadow:inset 0 0 0 3px #ff9a9a, inset 0 0 26px 4px rgba(255,20,20,.75)}
   .frame.on{opacity:1}
 
-  .top{display:grid;grid-template-columns:1fr 300px 460px 300px 1fr;border-bottom:3px solid #fff}
-  .teamhead{background:linear-gradient(135deg,#0a2fb8,#1b4bff 60%,#0a2fb8);display:flex;align-items:center;justify-content:center}
-  .teamhead img{max-width:85%;max-height:85%;object-fit:contain}
-  .teamhead .ph{font-size:120px;opacity:.9}
+  /* fila superior con medidas fijas: el tamaño del logo (o del texto) nunca mueve marcador ni reloj */
+  .top{display:grid;grid-template-columns:435px 275px 450px 275px 435px;grid-template-rows:100%;height:243px;min-height:0;overflow:hidden;border-bottom:3px solid #fff}
+  .top>*{min-width:0;min-height:0;overflow:hidden}
+  .teamhead{background:linear-gradient(135deg,#0a2fb8,#1b4bff 60%,#0a2fb8);display:flex;align-items:center;justify-content:center;position:relative}
+  .teamhead img{position:absolute;left:7.5%;top:7.5%;width:85%;height:85%;object-fit:contain}
+  .teamhead .ph{font-size:120px;opacity:.9;white-space:nowrap}
   .scorebox{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center}
   .sc{font-size:168px;line-height:1;font-variant-numeric:tabular-nums}
   .qs{display:flex;gap:12px;margin-top:8px;min-height:44px}
@@ -50,12 +53,12 @@
   .flash{animation:fl .25s steps(2) 6}
   @keyframes fl{50%{background:#ff3b30;color:#fff}}
 
-  .bottom{display:grid;grid-template-columns:500px 1fr 500px;gap:10px;min-height:0}
-  .col{display:flex;flex-direction:column;gap:10px;min-height:0}
-  .panel{border:3px solid #fff;background:#000}
-  .panel h2{background:linear-gradient(#0a2fb8,#06196b);text-align:center;font-size:64px;height:76px;line-height:76px;border-bottom:3px solid #fff}
-  table{width:100%;border-collapse:collapse;table-layout:fixed}
-  th{background:#0a2fb8;font-size:26px;height:46px;border:2px solid #1b4bff}
+  .bottom{display:grid;grid-template-columns:482px 870px 482px;column-gap:18px;min-height:0}
+  .col{display:flex;flex-direction:column;gap:17px;min-height:0}
+  .panel{border:3px solid #fff;background:#000;height:503px;display:flex;flex-direction:column;overflow:hidden}
+  .panel h2{background:linear-gradient(#0a2fb8,#06196b);text-align:center;font-size:56px;height:70px;line-height:67px;border-bottom:3px solid #fff;flex:none;white-space:nowrap;overflow:hidden}
+  table{width:calc(100% - 18px);margin:0 9px;border-collapse:collapse;table-layout:fixed}
+  th{background:#0a2fb8;font-size:26px;height:50px;border:2px solid #1b4bff}
   td{height:62px;border:2px solid #1b4bff;text-align:center;font-size:40px;font-variant-numeric:tabular-nums}
   td.nm{text-align:left;padding-left:10px;font-size:28px;white-space:nowrap;overflow:hidden}
   td.pn{line-height:1;padding:0}
@@ -64,9 +67,11 @@
   td.nm sup{font-size:20px;margin-left:5px;opacity:.85;vertical-align:top;position:relative;top:6px}
   td.pfw{color:#ffd400}
   td.pfx{color:#ff3b30}
-  th.nm{width:38%}
-  th.pn{width:14%}
-  .foot{display:grid;grid-template-columns:1fr 1fr;height:68px;border-top:3px solid #fff}
+  /* columnas de la plantilla: #+jugador 210px, PTS 86, REB 86, AST 71 */
+  th.nm{width:33.4%}
+  th.pn{width:13%}
+  th.c{width:19%}
+  .foot{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0;border-top:3px solid #fff}
   .foot div{display:flex;align-items:center;justify-content:center;gap:16px;font-size:36px}
   .foot div.bonus{background:#c8102e;animation:bn 1s steps(2) infinite}
   @keyframes bn{50%{background:#8a0a20}}
@@ -78,25 +83,39 @@
   .cell i{font-style:normal;font-size:17px;color:#9db4ff;margin-bottom:5px;white-space:nowrap}
   .cell b{font-size:38px;font-variant-numeric:tabular-nums;white-space:nowrap}
 
-  .center{display:grid;grid-template-rows:1fr 150px;gap:10px;min-height:0}
+  .center{display:grid;grid-template-rows:560px 137px;gap:16px;min-height:0}
   .media{border:3px solid #fff;background:#000;position:relative;overflow:hidden}
   .strip{border:3px solid #fff;background:#000}
   body.cg .media,body.cg .strip{background:#00b140}
   body.transparent .media,body.transparent .strip{background:transparent}
 
   /* vistas del centro: líderes / comparativa / cronómetro */
-  .view{position:absolute;inset:0;display:flex;flex-direction:column;background:linear-gradient(#050a24,#000)}
-  .view h3{background:linear-gradient(#0a2fb8,#06196b);border-bottom:3px solid #fff;text-align:center;font-size:44px;height:64px;line-height:64px;letter-spacing:2px}
-  .vteams{display:grid;grid-template-columns:1fr 200px 1fr;height:56px;align-items:center;text-align:center;font-size:34px;background:#0a2fb8}
+  /* colores editables desde el panel (Ajustes → Colores de Líderes / Comparativa) */
+  :root{--vbg:#050a24;--vhead:#0a2fb8;--vteams:#0a2fb8;--vline:#1b4bff;--vlabel:#9db4ff;--vlead:#ffd400;--vtext:#fff}
+  .view{position:absolute;inset:0;display:flex;flex-direction:column;color:var(--vtext);background:linear-gradient(rgba(0,0,0,0),#000),var(--vbg)}
+  .view h3{background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.45)),var(--vhead);border-bottom:3px solid var(--vline);text-align:center;font-size:44px;height:64px;line-height:61px;letter-spacing:2px}
+  .vteams{display:grid;grid-template-columns:1fr 200px 1fr;height:56px;align-items:center;text-align:center;font-size:34px;background:var(--vteams)}
   .vrows{flex:1;min-height:0;overflow:hidden;display:grid;grid-auto-rows:minmax(0,1fr)}
-  .vrow{display:grid;grid-template-columns:1fr 200px 1fr;align-items:center;text-align:center;border-bottom:2px solid #1b4bff}
+  .vrow{display:grid;grid-template-columns:1fr 200px 1fr;align-items:center;text-align:center;border-bottom:2px solid var(--vline)}
   .vrow:last-child{border-bottom:0}
-  .vrow .lab{font-size:26px;color:#9db4ff;white-space:nowrap}
+  .vrow .lab{font-size:26px;color:var(--vlabel);white-space:nowrap}
   .vrow .val{font-size:40px;line-height:1;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center;gap:12px}
-  .vrow .val small{font-size:22px;color:#9db4ff}
-  .vrow .val.lead{color:#ffd400}
+  .vrow .val small{font-size:22px;color:var(--vlabel)}
+  .vrow .val.lead{color:var(--vlead)}
   .lrow .val{font-size:30px;gap:0}
-  .lrow .val b{font-size:56px;margin-left:12px;color:#ffd400;font-variant-numeric:tabular-nums}
+  .lrow .val b{font-size:56px;margin-left:12px;color:var(--vlead);font-variant-numeric:tabular-nums}
+  /* sin fondos: se ve la plantilla de fondo debajo de las vistas */
+  html.vclear .view,html.vclear .view h3,html.vclear .vteams{background:transparent}
+  html.vclear .media{background:transparent}
+  /* ---- capas para Resolume: ?layer=base (todo menos las estadisticas del centro) y ?layer=stats (solo las estadisticas del centro) ---- */
+  html.layer-stats #stage>*:not(.bottom),html.layer-stats .col,html.layer-stats .strip{visibility:hidden}
+  html.layer-stats #stage{background:none}
+  html.layer-stats .frame{display:none}
+  /* ---- imagen de fondo propia: con bgOnly se quitan los colores de las cajas y se ve solo tu diseño ---- */
+  #stage.hasbg{background-size:100% 100%;background-repeat:no-repeat;background-position:center}
+  html.bgonly .title,html.bgonly .teamhead,html.bgonly .scorebox,html.bgonly .mid,html.bgonly .panel,html.bgonly .panel h2,
+  html.bgonly th,html.bgonly .tbox,html.bgonly .media,html.bgonly .strip,html.bgonly .top{background:transparent!important;border-color:transparent!important}
+  html.bgonly td,html.bgonly th,html.bgonly .cell,html.bgonly .foot{border-color:transparent!important}
   .bar{width:680px;height:22px;background:#1a2250;border:2px solid #fff}
 </style>
 </head>
@@ -139,6 +158,7 @@ addEventListener('resize', fit); fit();
 function panel(t) {
   const set = S.settings, lim = set.foulOut || 5;
   const on = t.players.filter((p) => p.on).slice(0, 5);
+  if (set.sortByPts !== false) on.sort((a, b) => b.pts - a.pts);   // orden estable: con los mismos puntos conserva el orden de la plantilla
   while (on.length < 5) on.push(null);
   const rows = on.map((p) => {
     if (!p) return '<tr><td class="pn"></td><td class="nm"></td><td></td><td></td><td></td></tr>';
@@ -148,7 +168,7 @@ function panel(t) {
   }).join('');
   const bonus = t.fouls >= (set.foulBonus || 5);
   return `<h2>${esc(t.name)}</h2>
-    <table><tr><th class="pn">#</th><th class="nm">JUGADOR</th><th>PTS</th><th>REB</th><th>AST</th></tr>${rows}</table>
+    <table><tr><th class="pn">#</th><th class="nm">JUGADOR</th><th class="c">PTS</th><th class="c">REB</th><th>AST</th></tr>${rows}</table>
     <div class="foot"><div class="${bonus ? 'bonus' : ''}">${bonus ? 'BONUS' : 'FALTAS'} <b>${t.fouls}</b></div><div>TIEMPOS <b>${t.timeouts}</b></div></div>`;
 }
 
@@ -211,12 +231,24 @@ function qsHTML(k) {
   return h;
 }
 
+const LAYER = new URLSearchParams(location.search).get('layer') || '';   // '' | base | stats
 function render() {
   if (!S) return;
   const set = S.settings;
-  document.documentElement.classList.toggle('transparent', set.center === 'transparent');
-  document.body.classList.toggle('transparent', set.center === 'transparent');
-  document.body.classList.toggle('cg', set.center === 'green');
+  const R = document.documentElement;
+  const cmode = LAYER ? 'transparent' : set.center;           // en las capas el centro siempre es transparente
+  R.classList.toggle('layer-base', LAYER === 'base');
+  R.classList.toggle('layer-stats', LAYER === 'stats');
+  R.classList.toggle('transparent', cmode === 'transparent');
+  document.body.classList.toggle('transparent', cmode === 'transparent');
+  document.body.classList.toggle('cg', cmode === 'green');
+  const bg = set.bgImage || '';
+  $('stage').style.backgroundImage = bg ? `url("${bg.replace(/"/g, '%22')}")` : '';
+  $('stage').classList.toggle('hasbg', !!bg);
+  R.classList.toggle('bgonly', !!bg && !!set.bgOnly);
+  R.classList.toggle('vclear', !!set.viewClear);
+  for (const [k, v] of [['viewBg', '--vbg'], ['viewHead', '--vhead'], ['viewTeams', '--vteams'], ['viewLine', '--vline'], ['viewLabel', '--vlabel'], ['viewLead', '--vlead'], ['viewText', '--vtext']])
+    if (set[k]) R.style.setProperty(v, set[k]); else R.style.removeProperty(v);
   $('title').textContent = set.title;
   $('hlogo').innerHTML = logo(S.teams.home); $('alogo').innerHTML = logo(S.teams.away);
   $('hscore').textContent = two(S.teams.home.score); $('ascore').textContent = two(S.teams.away.score);
@@ -228,7 +260,7 @@ function render() {
   $('period').textContent = S.timer.kind ? S.timer.label : S.final ? 'FINAL' : label;
   $('period').classList.toggle('final', !!S.final);
   const v = set.centerView;
-  $('media').innerHTML = v === 'leaders' ? leadersView() : v === 'compare' ? compareView() : '';
+  $('media').innerHTML = LAYER === 'base' ? '' : v === 'leaders' ? leadersView() : v === 'compare' ? compareView() : '';
 }
 
 // ---- relojes: el servidor manda el valor, aquí se interpola para que sea fluido ----
@@ -253,7 +285,8 @@ function tick() {
   } else {
     $('gclock').classList.remove('low');
     $('gclock').textContent = fmtGame(g);
-    const show = S && S.settings.shotVisible && !(g > 0 && g < s);        // se apaga si el juego tiene menos que los 24
+    const off = S ? S.settings.shotOffMs || 0 : 0;
+    const show = S && S.settings.shotVisible && !(off > 0 && g < off);   // se apaga solo cuando al juego le quedan menos de 24 s
     $('sclock').textContent = show ? (s < 5000 && s > 0 ? (Math.floor(s / 100) / 10).toFixed(1) : Math.ceil(s / 1000)) : '';
     $('sclock').classList.toggle('low', s <= 5000);
   }

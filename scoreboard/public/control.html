@@ -9,6 +9,8 @@
   body{margin:0;background:#0d1117;color:#e6edf3;font:14px/1.3 "Segoe UI",Arial,sans-serif}
   header{display:flex;gap:16px;align-items:center;padding:8px 14px;background:#161b22;position:sticky;top:0;z-index:5;border-bottom:1px solid #30363d}
   .dot{width:12px;height:12px;border-radius:50%;background:#f85149}.dot.ok{background:#3fb950}
+  .roles a{color:#8b949e;text-decoration:none;border:1px solid #30363d;border-radius:14px;padding:3px 10px;font-size:12px;margin-right:4px}
+  .roles a.on{background:#1f6feb;color:#fff;border-color:#1f6feb}
   .clocks{display:flex;gap:22px;align-items:baseline;margin-left:auto;font-variant-numeric:tabular-nums}
   .clocks b{font-size:30px}.clocks .sh{color:#ffd400}.clocks .tm{color:#ff7b72}
   main{padding:12px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
@@ -42,11 +44,12 @@
 <header>
   <span class="dot" id="dot"></span><span id="status">Conectando…</span>
   <span class="kbd">Pantalla: <code id="durl"></code></span>
+  <nav class="roles" id="roles"></nav>
   <div class="clocks"><b class="tm" id="ct"></b><span id="plabel"></span><b id="cg">10:00</b><b class="sh" id="cs">24</b></div>
 </header>
 
 <main>
-<section class="wide">
+<section class="wide" data-rol="relojes">
   <h3>Relojes (mesa)</h3>
   <div class="row">
     <button class="big go" data-c='{"a":"gameToggle"}'>▶ / ⏸ Reloj juego <span class="kbd">[Espacio]</span></button>
@@ -68,7 +71,7 @@
   </div>
 </section>
 
-<section class="wide">
+<section class="wide" data-rol="jugada">
   <h3>Jugada: posesión, tiempos fuera, descansos</h3>
   <div class="row">
     <span>Posesión:</span>
@@ -76,8 +79,6 @@
     <button class="big" data-c='{"a":"possession","team":"away"}'>Visitante ▶</button>
     <button data-c='{"a":"possessionToggle"}'>Alternar <span class="kbd">[P]</span></button>
     <button data-c='{"a":"possession","team":"none"}'>Quitar</button>
-    <span style="margin-left:18px"></span>
-    <button class="big warn" data-c='{"a":"undo"}'>↶ Deshacer <span class="kbd">[Z]</span></button>
   </div>
   <div class="row" style="margin-top:8px">
     <span>Tiempo fuera:</span>
@@ -99,7 +100,7 @@
   </div>
 </section>
 
-<section class="wide">
+<section class="wide" data-rol="jugada">
   <h3>Vista del centro de la pantalla</h3>
   <div class="row">
     <button class="big" data-c='{"a":"set","path":"settings.centerView","value":"none"}'>Ninguna (anuncios de Resolume)</button>
@@ -109,7 +110,7 @@
   </div>
 </section>
 
-<section class="wide">
+<section class="wide" data-rol="jugada">
   <h3>Rótulo de anotación (popup.html)</h3>
   <div class="row">
     <div style="width:90px"><label>Texto grande</label><input type="text" id="p1" value="+3"></div>
@@ -125,12 +126,17 @@
   </div>
 </section>
 
-<section id="t-home"></section>
-<section id="t-away"></section>
-<section class="wide" id="r-home"></section>
-<section class="wide" id="r-away"></section>
+<section class="wide" data-rol="anotacion">
+  <h3>Anotación</h3>
+  <div class="row"><button class="big warn" data-c='{"a":"undo"}'>↶ Deshacer última anotación/estadística <span class="kbd">[Z]</span></button>
+    <span class="kbd">Solo deshace marcador, faltas y estadísticas; no toca relojes, posesión ni tiempos fuera.</span></div>
+</section>
+<section id="t-home" data-rol="anotacion"></section>
+<section id="t-away" data-rol="anotacion"></section>
+<section class="wide" id="r-home" data-rol="anotacion"></section>
+<section class="wide" id="r-away" data-rol="anotacion"></section>
 
-<section class="wide">
+<section class="wide" data-rol="admin">
   <h3>Plantillas de equipos (base de datos)</h3>
   <div class="row" style="align-items:flex-start">
     <div style="flex:1;min-width:380px" id="db-home"></div>
@@ -139,7 +145,7 @@
   <div class="kbd" style="margin-top:6px">Guardar usa el nombre del equipo. Para importar pega una lista, una línea por jugador: <code>4, G. Torres</code> (los primeros 5 quedan “en cancha”).</div>
 </section>
 
-<section class="wide">
+<section class="wide" data-rol="admin">
   <h3>Resumen del juego (PDF)</h3>
   <div class="row">
     <a class="btn big go" href="/report.pdf" target="_blank">📄 Ver PDF del juego actual</a>
@@ -149,7 +155,7 @@
   <table class="games" id="games"><tr><td class="kbd">Cargando…</td></tr></table>
 </section>
 
-<section class="wide">
+<section class="wide" data-rol="admin">
   <h3>Ajustes</h3>
   <div class="row">
     <div style="flex:2;min-width:220px"><label>Título superior</label><input type="text" data-path="settings.title"></div>
@@ -171,9 +177,29 @@
   <div class="row" style="margin-top:6px">
     <label style="margin:0"><input type="checkbox" data-path="settings.linkShot" data-type="bool"> 24s ligado al reloj del juego</label>
     <label style="margin:0 0 0 14px"><input type="checkbox" data-path="settings.shotVisible" data-type="bool"> Mostrar reloj de 24</label>
+    <label style="margin:0 0 0 14px"><input type="checkbox" data-path="settings.sortByPts" data-type="bool"> Jugadores en pantalla de mayor a menor puntos</label>
+    <label style="margin:0 0 0 14px">Apagar 24 con menos de <input class="num" type="number" data-path="settings.shotOffMs" data-type="sec" style="width:56px"> s de juego</label>
     <button class="stop" id="reset" style="margin-left:auto">Nuevo juego (reiniciar todo)</button>
   </div>
-</section>
+  <h4>Fondo / diseño de la pantalla (PNG 1920×1080)</h4>
+  <div class="row">
+    <input type="file" accept="image/*" data-up="bg:" style="flex:1;min-width:220px">
+    <label style="margin:0"><input type="checkbox" data-path="settings.bgOnly" data-type="bool"> Usar solo mi imagen (quita los colores de las cajas)</label>
+    <button class="sm" data-c='{"a":"set","path":"settings.bgImage","value":""}'>Quitar fondo</button>
+  </div>
+  <div class="kbd" id="uploadmsg" style="margin-top:4px"></div>
+  <h4>Colores de Líderes / Comparativa</h4>
+  <div class="row" style="flex-wrap:wrap;gap:10px 16px">
+    <label style="margin:0">Fondo <input type="color" data-path="settings.viewBg"></label>
+    <label style="margin:0">Franja del título <input type="color" data-path="settings.viewHead"></label>
+    <label style="margin:0">Franja de equipos <input type="color" data-path="settings.viewTeams"></label>
+    <label style="margin:0">Líneas <input type="color" data-path="settings.viewLine"></label>
+    <label style="margin:0">Etiquetas <input type="color" data-path="settings.viewLabel"></label>
+    <label style="margin:0">Valor que gana <input type="color" data-path="settings.viewLead"></label>
+    <label style="margin:0">Texto <input type="color" data-path="settings.viewText"></label>
+    <label style="margin:0"><input type="checkbox" data-path="settings.viewClear" data-type="bool"> Sin fondos (se ve mi plantilla)</label>
+    <button class="sm" id="vreset">Colores originales</button>
+  </div>
 </main>
 
 <script>
@@ -181,6 +207,12 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 let S = null, ws, label = '1 QT';
 let clk = { g: 0, s: 0, gr: false, sr: false, tm: 0, tr: false, at: performance.now() };
+// ---------- roles: control.html?rol=relojes | anotacion | jugada | admin  (sin rol = todo) ----------
+const ROLES = { todo: 'Todo', relojes: 'Relojes', anotacion: 'Anotación', jugada: 'Jugada y pantalla', admin: 'Ajustes' };
+const ROL = ROLES[new URLSearchParams(location.search).get('rol')] ? new URLSearchParams(location.search).get('rol') : 'todo';
+$('#roles').innerHTML = Object.entries(ROLES).map(([k, v]) => `<a href="?rol=${k}" class="${k === ROL ? 'on' : ''}">${v}</a>`).join('');
+if (ROL !== 'todo') $$('section[data-rol]').forEach((s) => { if (s.dataset.rol !== ROL) s.hidden = true; });
+document.title = 'Scoreboard - ' + ROLES[ROL];
 const get = (p) => p.split('.').reduce((o, k) => (o == null ? o : o[k]), S);
 const send = (o) => ws && ws.readyState === 1 && ws.send(JSON.stringify({ t: 'cmd', ...o }));
 $('#durl').textContent = `${location.origin}/display.html`;
@@ -193,7 +225,9 @@ function teamHTML(t, title) {
   return `<h3>${title}</h3>
   <div class="row"><div style="flex:2"><label>Nombre</label><input type="text" data-path="${P}.name"></div>
     <div style="flex:1"><label>Sigla</label><input type="text" data-path="${P}.short"></div></div>
-  <label>Logo (ruta o URL, ej. /logos/ponce.png)</label><input type="text" data-path="${P}.logo">
+  <label>Logo del equipo (PNG con fondo transparente se ve mejor)</label>
+  <div class="row"><input type="file" accept="image/*" data-up="logo:${t}" style="flex:1;min-width:0"><button class="sm" data-c='{"a":"set","path":"${P}.logo","value":""}'>Quitar</button></div>
+  <input type="text" data-path="${P}.logo" placeholder="o escribe una ruta/URL, ej. /logos/ponce.png" style="margin-top:4px">
   <label>Nota (cuadro inferior)</label><input type="text" data-path="${P}.note">
   <div class="row" style="margin-top:8px">
     <span class="big-score" data-bind="${P}.score"></span>
@@ -265,15 +299,34 @@ document.addEventListener('change', (e) => {
   else if (ty === 'int') v = Math.max(0, parseInt(v, 10) || 0);
   send({ a: 'set', path: p, value: v });
 });
+// colores originales de Líderes / Comparativa
+const VIEW_DEFAULTS = { viewBg: '#050a24', viewHead: '#0a2fb8', viewTeams: '#0a2fb8', viewLine: '#1b4bff', viewLabel: '#9db4ff', viewLead: '#ffd400', viewText: '#ffffff', viewClear: false };
+document.getElementById('vreset').addEventListener('click', () => {
+  for (const [k, v] of Object.entries(VIEW_DEFAULTS)) send({ a: 'set', path: 'settings.' + k, value: v });
+});
+document.addEventListener('change', async (e) => {
+  const el = e.target; if (!el.dataset || !el.dataset.up || !el.files[0]) return;
+  const [kind, team] = el.dataset.up.split(':'), f = el.files[0], msg = $('#uploadmsg');
+  const ext = ((f.name.split('.').pop() || '').toLowerCase()) || 'png';
+  try {
+    const r = await fetch(`/api/upload?kind=${kind}&team=${team}&ext=${ext}`, { method: 'POST', body: f });
+    const j = await r.json(); if (!j.ok) throw new Error(j.error || 'error');
+    send(kind === 'logo' ? { a: 'set', path: `teams.${team}.logo`, value: j.path } : { a: 'set', path: 'settings.bgImage', value: j.path });
+    if (kind === 'bg') send({ a: 'set', path: 'settings.bgOnly', value: true });
+    if (msg) msg.textContent = 'Imagen cargada: ' + f.name;
+  } catch (err) { if (msg) msg.textContent = 'No se pudo subir: ' + err.message; }
+  el.value = '';
+});
 $('#setgame').onclick = () => send({ a: 'gameSet', ms: (+$('#setm').value * 60 + +$('#sets').value) * 1000 });
 $('#reset').onclick = () => confirm('¿Empezar un juego nuevo? (el actual queda guardado en el historial)') && send({ a: 'resetGame' });
 $('#plaunch').onclick = () => send({ a: 'popup', l1: $('#p1').value, l2: $('#p2').value, l3: $('#p3').value, team: $('#pt').value });
 
 addEventListener('keydown', (e) => {
   if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) && document.activeElement.type !== 'checkbox') return;
-  const k = { ' ': { a: 'gameToggle' }, '1': { a: 'shotReset', ms: 24000 }, '2': { a: 'shotReset', ms: 14000 },
-    s: { a: 'shotToggle' }, S: { a: 'shotToggle' }, p: { a: 'possessionToggle' }, P: { a: 'possessionToggle' }, z: { a: 'undo' }, Z: { a: 'undo' } }[e.key];
-  if (k) { e.preventDefault(); send(k); }
+  const keys = { ' ': ['relojes', { a: 'gameToggle' }], '1': ['relojes', { a: 'shotReset', ms: 24000 }], '2': ['relojes', { a: 'shotReset', ms: 14000 }],
+    s: ['relojes', { a: 'shotToggle' }], p: ['jugada', { a: 'possessionToggle' }], z: ['anotacion', { a: 'undo' }] };
+  const k = keys[e.key.toLowerCase()];
+  if (k && (ROL === 'todo' || ROL === k[0])) { e.preventDefault(); send(k[1]); }
 });
 
 // ---------- estado ----------
@@ -304,7 +357,8 @@ function loop() {
   const el = performance.now() - clk.at;
   const g = Math.max(0, clk.g - (clk.gr ? el : 0)), s = Math.max(0, clk.s - (clk.sr ? el : 0)), tm = Math.max(0, clk.tm - (clk.tr ? el : 0));
   $('#cg').textContent = g < 60000 ? (Math.floor(g / 100) / 10).toFixed(1) : Math.floor(Math.ceil(g / 1000) / 60) + ':' + two(Math.ceil(g / 1000) % 60);
-  $('#cs').textContent = Math.ceil(s / 1000);
+  const off = S ? S.settings.shotOffMs || 0 : 0;
+  $('#cs').textContent = off > 0 && g < off ? '—' : Math.ceil(s / 1000);
   $('#ct').textContent = S && S.timer.kind ? `${S.timer.label} ${Math.floor(Math.ceil(tm / 1000) / 60)}:${two(Math.ceil(tm / 1000) % 60)}` : '';
   requestAnimationFrame(loop);
 }
