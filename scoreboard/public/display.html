@@ -166,7 +166,7 @@ function panel(t) {
     const sup = p.pf > 0 ? `<sup>${p.pf}</sup>` : '';
     return `<tr><td class="pn ${cls}"><b>${esc(p.n || '')}</b><i>${esc(p.pos || '')}</i></td><td class="nm ${cls}">${esc(p.name)}${sup}</td><td>${p.pts}</td><td>${p.reb}</td><td>${p.ast}</td></tr>`;
   }).join('');
-  const bonus = t.fouls >= (set.foulBonus || 5);
+  const bonus = t.fouls >= (set.foulBonus || 4);
   return `<h2>${esc(t.name)}</h2>
     <table><tr><th class="pn">#</th><th class="nm">JUGADOR</th><th class="c">PTS</th><th class="c">REB</th><th>AST</th></tr>${rows}</table>
     <div class="foot"><div class="${bonus ? 'bonus' : ''}">${bonus ? 'BONUS' : 'FALTAS'} <b>${t.fouls}</b></div><div>TIEMPOS <b>${t.timeouts}</b></div></div>`;

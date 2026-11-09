@@ -59,7 +59,8 @@ function defaults() {
       center: 'black',      // black | transparent | green
       bottom: 'stats',      // cuadro inferior de cada equipo: stats | note
       centerView: 'none',   // none | leaders | compare
-      foulBonus: 5,         // faltas de equipo por periodo para entrar en BONUS (FIBA = 5)
+      foulBonus: 4,         // BONUS se enciende al llegar a estas faltas de equipo en el periodo (FIBA = 4, NBA = 5)
+      otFoulsCarry: false,  // true = en tiempo extra siguen las faltas del 4to (regla FIBA); false = cada periodo empieza en 0
       foulOut: 5,           // faltas personales para eliminar al jugador (FIBA = 5, NBA = 6)
       timeoutMs: 60000,     // tiempo fuera (FIBA = 60 s)
       breakMs: 120000,      // descanso entre periodos
@@ -267,7 +268,8 @@ function run(c) {
       S.period += 1;
       S.game.ms = S.period > 4 ? S.settings.otMs : S.settings.periodMs;
       S.shot.ms = 24000; S.game.running = false; S.shot.running = false;
-      if (S.period <= 4) { S.teams.home.fouls = 0; S.teams.away.fouls = 0; }  // FIBA: en el OT siguen las faltas del 4to
+      // faltas de equipo (y BONUS) a 0 en cada periodo nuevo; opcional FIBA: en el OT siguen las del 4to
+      if (S.period <= 4 || !S.settings.otFoulsCarry) { S.teams.home.fouls = 0; S.teams.away.fouls = 0; }
       ensurePeriods(); undoStack.length = 0;
       log(`Inicio ${periodLabel(S.period)}`);
       break;

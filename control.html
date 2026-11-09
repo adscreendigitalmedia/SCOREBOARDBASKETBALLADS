@@ -167,7 +167,7 @@
     <div><label>Minutos de OT</label><input type="number" data-path="settings.otMs" data-type="min"></div>
   </div>
   <div class="row">
-    <div><label>Faltas de equipo para BONUS</label><input type="number" data-path="settings.foulBonus" data-type="int"></div>
+    <div><label>BONUS al llegar a … faltas del equipo en el periodo (FIBA 4, NBA 5)</label><input type="number" min="1" data-path="settings.foulBonus" data-type="int"></div>
     <div><label>Faltas para eliminar jugador</label><input type="number" data-path="settings.foulOut" data-type="int"></div>
     <div><label>Tiempo fuera (segundos)</label><input type="number" data-path="settings.timeoutMs" data-type="sec"></div>
     <div><label>Descanso entre periodos (min)</label><input type="number" data-path="settings.breakMs" data-type="min"></div>
@@ -178,6 +178,7 @@
     <label style="margin:0"><input type="checkbox" data-path="settings.linkShot" data-type="bool"> 24s ligado al reloj del juego</label>
     <label style="margin:0 0 0 14px"><input type="checkbox" data-path="settings.shotVisible" data-type="bool"> Mostrar reloj de 24</label>
     <label style="margin:0 0 0 14px"><input type="checkbox" data-path="settings.sortByPts" data-type="bool"> Jugadores en pantalla de mayor a menor puntos</label>
+    <label style="margin:0 0 0 14px"><input type="checkbox" data-path="settings.otFoulsCarry" data-type="bool"> En tiempo extra seguir las faltas del 4to (FIBA)</label>
     <label style="margin:0 0 0 14px">Apagar 24 con menos de <input class="num" type="number" data-path="settings.shotOffMs" data-type="sec" style="width:56px"> s de juego</label>
     <button class="stop" id="reset" style="margin-left:auto">Nuevo juego (reiniciar todo)</button>
   </div>
