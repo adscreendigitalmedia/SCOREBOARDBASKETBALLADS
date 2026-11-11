@@ -53,6 +53,17 @@
   .scr .grid input{width:100%}
   .scr code{font-size:12px;word-break:break-all}
   .warnmsg{color:#ff7b72;font-size:12px}
+  /* vista previa en vivo (todos los usuarios) */
+  #prev{padding:8px 12px}
+  #prev.pin{position:sticky;top:var(--hdr,52px);z-index:4;box-shadow:0 8px 18px rgba(0,0,0,.55)}
+  #prev .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  #prev .bar h3{margin:0}
+  #prev .bar select{width:auto}
+  #prev .wrap{margin-top:8px;width:50%;max-width:100%;background:repeating-conic-gradient(#1c2128 0 25%,#0d1117 0 50%) 0 0/16px 16px;border:1px solid #444c56;border-radius:4px;overflow:hidden}
+  #prev .wrap.s{width:33%}#prev .wrap.m{width:50%}#prev .wrap.l{width:100%}
+  #prev iframe{display:block;width:100%;height:100%;border:0;background:transparent}
+  #prev.off .wrap{display:none}
+  @media (max-width:700px){#prev .wrap.s,#prev .wrap.m{width:100%}}
   .mini{position:relative;width:260px;max-width:100%;background:repeating-conic-gradient(#1c2128 0 25%,#0d1117 0 50%) 0 0/16px 16px;border:1px solid #444c56;border-radius:4px;flex:none;touch-action:none}
   .mini .r{position:absolute;background:rgba(31,111,235,.85);border:1px solid #fff;border-radius:2px;cursor:grab;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;overflow:hidden;white-space:nowrap}
   .mini .r.drag{cursor:grabbing;background:rgba(46,160,67,.9)}
@@ -71,6 +82,17 @@
 
 <div class="toast" id="toast"></div>
 <main>
+<section class="wide" id="prev">
+  <div class="bar">
+    <h3>Vista previa</h3>
+    <select id="pvScreen" title="Pantalla que se ve"></select>
+    <select id="pvSize" title="Tamaño de la vista previa"><option value="s">Chica</option><option value="m">Mediana</option><option value="l">Grande</option></select>
+    <label style="margin:0;display:flex;gap:4px;align-items:center;color:#e6edf3"><input type="checkbox" id="pvPin"> 📌 Fijar arriba</label>
+    <button class="sm" id="pvToggle">Ocultar</button>
+    <span class="kbd">Es la pantalla real en vivo; lo cuadriculado es transparente (anuncios).</span>
+  </div>
+  <div class="wrap m" id="pvWrap"><iframe id="pvFrame" title="Vista previa de la pantalla"></iframe></div>
+</section>
 <section class="wide" data-rol="relojes">
   <h3>Relojes (mesa)</h3>
   <div class="row">
@@ -286,6 +308,41 @@ function applyRoles() {
   $('#adminlink').hidden = !isAdmin();
   document.title = 'Scoreboard - ' + (ROL === 'todo' ? (ME.name || ME.username) : ROLE_NAMES[ROL]);
 }
+// ---------- vista previa en vivo: para todos los usuarios; cada quien recuerda su elección en su navegador ----------
+const pvGet = (k, d) => { try { return localStorage.getItem('pv.' + k) ?? d; } catch (_) { return d; } };
+const pvSet = (k, v) => { try { localStorage.setItem('pv.' + k, v); } catch (_) {} };
+let pvKey = '';
+function renderPreview() {
+  const list = (S && S.settings.screens) || [];
+  const key = list.map((x) => x.id + ':' + x.name + ':' + x.w + 'x' + x.h).join('|');
+  if (key !== pvKey) {
+    pvKey = key;
+    const want = pvGet('screen', 'principal'), cur = list.find((x) => x.id === want) ? want : 'principal';
+    $('#pvScreen').innerHTML = list.map((x) => `<option value="${x.id}">${x.name} (${x.w}×${x.h})</option>`).join('');
+    $('#pvScreen').value = cur;
+    setPreview(cur);
+  }
+}
+function setPreview(id) {
+  const sc = ((S && S.settings.screens) || []).find((x) => x.id === id) || { w: 1920, h: 1080 };
+  $('#pvWrap').style.aspectRatio = `${sc.w} / ${sc.h}`;
+  const src = '/display.html' + (id === 'principal' ? '' : '?p=' + encodeURIComponent(id));
+  if ($('#pvFrame').getAttribute('src') !== src) $('#pvFrame').setAttribute('src', src);
+}
+$('#pvScreen').onchange = () => { pvSet('screen', $('#pvScreen').value); setPreview($('#pvScreen').value); };
+$('#pvSize').value = pvGet('size', 'm');
+$('#pvWrap').className = 'wrap ' + $('#pvSize').value;
+$('#pvSize').onchange = () => { pvSet('size', $('#pvSize').value); $('#pvWrap').className = 'wrap ' + $('#pvSize').value; };
+$('#pvPin').checked = pvGet('pin', '0') === '1';
+$('#prev').classList.toggle('pin', $('#pvPin').checked);
+$('#pvPin').onchange = () => { pvSet('pin', $('#pvPin').checked ? '1' : '0'); $('#prev').classList.toggle('pin', $('#pvPin').checked); };
+const pvShow = (on) => { $('#prev').classList.toggle('off', !on); $('#pvToggle').textContent = on ? 'Ocultar' : 'Mostrar'; pvSet('on', on ? '1' : '0'); };
+pvShow(pvGet('on', '1') === '1');
+$('#pvToggle').onclick = () => pvShow($('#prev').classList.contains('off'));
+// la vista previa queda justo debajo del encabezado al fijarla
+const setHdr = () => document.documentElement.style.setProperty('--hdr', (document.querySelector('header').offsetHeight || 52) + 'px');
+addEventListener('resize', setHdr); setHdr();
+
 // ---------- pantallas (mismo diseño, distintos tamaños) ----------
 const SIZE_PRESETS = [
   ['1920x1080', 'Full HD 1920×1080'], ['1280x720', 'HD 1280×720'], ['3840x2160', '4K 3840×2160'],
@@ -664,7 +721,7 @@ function connect() {
     if (m.t === 'state') {
       S = m.s; label = m.label;
       clk = { g: S.game.ms, s: S.shot.ms, gr: S.game.running, sr: S.shot.running, tm: S.timer.ms, tr: S.timer.running, at: performance.now() };
-      renderScreens(); paint();
+      renderScreens(); renderPreview(); paint();
       clearTimeout(gt); gt = setTimeout(loadLists, 800);   // el historial cambia con el marcador
     } else if (m.t === 'clock') clk = { g: m.g, s: m.s, gr: m.gr, sr: m.sr, tm: m.tm, tr: m.tr, at: performance.now() };
     else if (m.t === 'lists') loadLists();

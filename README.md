@@ -83,6 +83,9 @@ Si los anuncios están en una capa por encima del scoreboard, las estadísticas 
 
 Orden en Resolume, de abajo hacia arriba: `base` → anuncios → `stats` → `popup`. Las estadísticas (líderes/comparativa) salen siempre sobre los anuncios, y cuando el centro está en *Ninguna* la capa `stats` es invisible y se ven los anuncios. En OBS, a cada fuente de navegador ponle el filtro **Dedicated NDI Output**.
 
+## Vista previa en el panel
+Arriba del panel, **todos los usuarios** (sin importar el rol) ven la pantalla **en vivo**, igual que en OBS. Puedes elegir qué pantalla ver, el tamaño (chica, mediana o grande), **📌 Fijar arriba** para que no se pierda al bajar, u ocultarla. Cada navegador recuerda su elección.
+
 ## Varias pantallas y tamaños
 En el panel, sección **Pantallas: diseño → Pantallas y tamaños** (rol *Pantallas* o *Admin*):
 - **Agregar pantalla:** nombre y tamaño (Full HD, HD, 4K, atajos P3.91 por gabinetes o *Personalizado*). Las proporciones se calculan solas para ese tamaño.
