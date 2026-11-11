@@ -50,17 +50,28 @@ Si la otra PC no conecta: abre el puerto 8080 en el firewall de Windows y verifi
 - **Vistas del centro:** líderes del juego y comparativa de equipos.
 - **FINAL:** marca el juego como terminado y lo guarda.
 
-## Roles: varias personas en la mesa
-Cada operador abre el mismo panel con su rol (cada rol solo muestra lo suyo y sus atajos). Sin `?rol=` se ve todo.
+## Usuarios y roles
+El panel pide **usuario y contraseña**. La primera vez entra con `admin` / `admin`; se te pide cambiarla de inmediato.
+En **Usuarios** (`/admin.html`, solo Admin) creas una cuenta para cada persona y marcas sus roles. Un usuario puede tener varios roles; cada quien ve solo sus secciones y el **servidor rechaza** cualquier acción fuera de sus roles.
 
-| Rol | URL | Qué maneja |
-|---|---|---|
-| Relojes | `/control.html?rol=relojes` | reloj de juego, 24 s, 14 s, periodos (`Espacio`, `1`, `2`, `S`) |
-| Anotación | `/control.html?rol=anotacion` | marcador, faltas, estadísticas, plantillas en cancha, deshacer (`Z`) |
-| Jugada y pantalla | `/control.html?rol=jugada` | posesión (`P`), tiempos fuera, descansos, FINAL, vista del centro, rótulos |
-| Ajustes | `/control.html?rol=admin` | logos, fondo, plantillas, PDF, reglas (se usa antes del juego) |
+| Rol | Qué maneja |
+|---|---|
+| Relojes | reloj de juego, 24 s, 14 s, periodos (`Espacio`, `1`, `2`, `S`) |
+| Anotación | marcador, faltas, estadísticas, jugadores en cancha, logos y nombres, plantillas, deshacer (`Z`) |
+| Jugada | posesión (`P`), tiempos fuera y su duración, descansos, FINAL, vista del centro |
+| Pantallas | título, centro de la pantalla, fondo / plantilla, colores de Líderes y Comparativa |
+| Admin | todo, más usuarios, reglas de la liga, juego nuevo, borrar plantillas y registro de actividad |
 
-Recomendación: en juegos grandes, 3 personas (relojes, anotación, jugada); si solo hay 2, junta *Jugada* con *Relojes*; con 1 persona usa la vista completa. Los tres paneles se pueden abrir en tablets distintas sin instalar nada.
+- Las cuentas nuevas reciben una **contraseña temporal** y deben cambiarla al entrar. Siempre queda al menos un administrador activo.
+- Al **desactivar** un usuario, su sesión abierta deja de funcionar al instante.
+- El **registro de actividad** (en Usuarios) guarda quién hizo cada acción y a qué hora.
+- Con varios roles, `?rol=relojes` (etc.) filtra la vista a uno solo.
+- `display.html` y `popup.html` **no** piden contraseña: son solo de lectura, para OBS.
+- Contraseña de admin olvidada: con el servidor apagado, en la carpeta `scoreboard` corre
+  `node -e "const s=require('./db').open(),a=require('./auth');const u=s.getUserByName('admin');s.setPassword(u.id,a.hashPassword('admin'),true)"`
+  y vuelve a entrar con `admin` / `admin`.
+
+Recomendación: en juegos grandes, 3 personas (relojes, anotación, jugada); si solo hay 2, junta *Jugada* con *Relojes*; con 1 persona, un usuario con todos los roles. Los paneles se pueden abrir en tablets distintas sin instalar nada.
 
 ## Logos y fondo (sin tocar archivos)
 En el panel (rol *Anotación* o *Ajustes*): **Logo del equipo → Elegir archivo** (PNG con fondo transparente, cuadrado o apaisado; se ajusta solo). **Fondo / diseño de la pantalla → Elegir archivo** (PNG 1920×1080). Con *Usar solo mi imagen* se quitan los colores de las cajas y se ve tu diseño con los textos encima. Los archivos se guardan en `public/logos/` y `public/bg/`. La guía `guia-medidas.png` marca dónde cae cada zona para que tu PNG coincida.
@@ -72,7 +83,18 @@ Si los anuncios están en una capa por encima del scoreboard, las estadísticas 
 
 Orden en Resolume, de abajo hacia arriba: `base` → anuncios → `stats` → `popup`. Las estadísticas (líderes/comparativa) salen siempre sobre los anuncios, y cuando el centro está en *Ninguna* la capa `stats` es invisible y se ven los anuncios. En OBS, a cada fuente de navegador ponle el filtro **Dedicated NDI Output**.
 
-## Medidas de la pantalla (lienzo 1920×1080 px)
+## Varias pantallas y tamaños
+En el panel, sección **Pantallas: diseño → Pantallas y tamaños** (rol *Pantallas* o *Admin*):
+- **Agregar pantalla:** nombre y tamaño (Full HD, HD, 4K, atajos P3.91 por gabinetes o *Personalizado*). Las proporciones se calculan solas para ese tamaño.
+- Todas muestran **el mismo scoreboard**; cada una tiene su enlace para OBS: la Principal es `display.html`, las demás `display.html?p=<id>` (botón *Copiar*). En OBS pon la Fuente de navegador con el mismo ancho y alto de la pantalla.
+- **Proporciones:** escala de letra, alto del título y del marcador, ancho de marcadores, reloj y laterales, alto de las estadísticas y de la franja, separaciones y márgenes (en px del lienzo). Si algo no cabe, aparece un aviso.
+- **Ajustar proporciones al tamaño:** recalcula todo después de cambiar ancho y alto.
+- **Fondo propio:** cada pantalla puede tener su PNG (del mismo tamaño que la pantalla); si no, usa el fondo general.
+- La **Principal** no se puede borrar y conserva las medidas de la plantilla de abajo.
+- **Diseño de cada pantalla:** *Tablero completo*, *Marcador tipo TV* o *Automático* (marcador tipo TV cuando el tablero completo no cabe, por ejemplo en un póster LED de 256×768).
+- **Marcador tipo TV**, dos estilos: **Fila de arriba del tablero** (las mismas piezas de la fila superior del tablero: logos, puntos con Q1/Q2, reloj con posesión, periodo y 24). Se acomoda a la forma del área: *franja* (la fila tal cual, con el pedazo de tu plantilla), *caja* (equipos arriba, reloj abajo) o *póster* (todo apilado, ideal para 256×768) o **Banner TV compacto** (logos, siglas, puntos, periodo, reloj, 24 s, faltas/BONUS, tiempos fuera y posesión). Ocupa **solo una parte** de la pantalla (*Posición*: arriba, abajo, lados, esquinas o centro; *Ancho %* y *Alto %*) y **el resto queda transparente** para poner anuncios en Resolume en una capa de abajo. Por defecto es un **banner delgado abajo, estilo NBA** (50% de ancho, 8% de alto: 960×86 px en 1920×1080); el *Atajo* trae banner arriba, esquinas y franjas. Se acomoda a la forma del área: banner, barra, caja o vertical. Para ponerlo **en cualquier lugar** (no pegado a los bordes), arrastra el rectángulo azul en la miniatura de la pantalla o elige *Posición: Libre* y escribe *X %* / *Y %*. El contorno rojo de la bocina sale solo alrededor del marcador.
+
+## Medidas de la pantalla Principal (lienzo 1920×1080 px)
 | Zona | x | y | ancho | alto |
 |---|---|---|---|---|
 | Centro (estadísticas / anuncios) | 525 | 347 | 870 | 560 |
@@ -103,10 +125,11 @@ La sección está oculta en el panel porque no se usa; `popup.html` y la API sig
 - **Resolume directo (opcional):** Resolume 7.8 o más nuevo trae API REST/WebSocket (Preferencias → Webserver) para cambiar parámetros y disparar clips. Si quieres diseñar el rótulo dentro de Resolume (Text Block, Text Animator), este servidor puede enviarle el texto y disparar el clip; necesito la ruta del clip que muestra la API de tu Resolume.
 
 ## API HTTP (Stream Deck, Companion, botones físicos)
+Los comandos necesitan la **clave** que aparece en *Usuarios → Clave para Stream Deck* (`key=`). Si generas una clave nueva, actualiza los botones.
 ```
-GET  /api/cmd?a=gameToggle              GET /api/cmd?a=shotReset&ms=24000
-GET  /api/cmd?a=possessionToggle        GET /api/cmd?a=undo
-GET  /api/cmd?a=timeoutStart&team=home  GET /api/cmd?a=periodNext
-POST /api/cmd   {"a":"playerStat","team":"home","i":0,"stat":"pts","by":2}
-GET  /api/state   /api/teams   /api/games   /report.pdf
+GET  /api/cmd?key=CLAVE&a=gameToggle              GET /api/cmd?key=CLAVE&a=shotReset&ms=24000
+GET  /api/cmd?key=CLAVE&a=possessionToggle        GET /api/cmd?key=CLAVE&a=undo
+GET  /api/cmd?key=CLAVE&a=timeoutStart&team=home  GET /api/cmd?key=CLAVE&a=periodNext
+POST /api/cmd?key=CLAVE   {"a":"playerStat","team":"home","i":0,"stat":"pts","by":2}
+GET  /api/state   (abierta, solo lectura)
 ```

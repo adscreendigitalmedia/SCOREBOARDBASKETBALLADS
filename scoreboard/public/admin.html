@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scoreboard - Usuarios</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#0d1117;color:#e6edf3;font:14px/1.4 "Segoe UI",Arial,sans-serif}
+  header{display:flex;gap:12px;align-items:center;padding:10px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-wrap:wrap}
+  header h1{font-size:16px;margin:0}
+  header .sp{flex:1}
+  main{padding:16px;display:grid;gap:16px;max-width:1100px;margin:0 auto}
+  section{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;min-width:0}
+  h3{margin:0 0 10px;font-size:14px;color:#8b949e;text-transform:uppercase;letter-spacing:1px}
+  a{color:#58a6ff}
+  button{background:#21262d;color:#e6edf3;border:1px solid #444c56;border-radius:6px;padding:7px 12px;font:inherit;cursor:pointer}
+  button:hover{background:#30363d}
+  button.go{background:#238636;border-color:#2ea043}
+  button.stop{background:#b62324;border-color:#da3633}
+  button.sm{padding:3px 8px;font-size:12px}
+  input[type=text],input[type=password]{background:#0d1117;color:#e6edf3;border:1px solid #444c56;border-radius:6px;padding:7px;font:inherit;width:100%}
+  label{color:#8b949e;font-size:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+  .roles{display:flex;flex-wrap:wrap;gap:4px 12px}
+  .roles label{color:#e6edf3;font-size:13px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+  .scroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%}
+  th,td{padding:7px 6px;border-bottom:1px solid #21262d;text-align:left;vertical-align:middle}
+  th{color:#8b949e;font-size:12px;font-weight:600}
+  tr.off td{opacity:.5}
+  .tag{display:inline-block;border-radius:4px;padding:1px 6px;font-size:11px;background:#9a6700;color:#fff;margin-left:4px}
+  .msg{min-height:20px;font-size:13px;margin-top:8px;color:#ff7b72}.msg.ok{color:#3fb950}
+  code{background:#0d1117;border:1px solid #30363d;border-radius:4px;padding:2px 6px;word-break:break-all}
+  .kbd{color:#8b949e;font-size:12px}
+  .help{color:#8b949e;font-size:12px;margin:0 0 10px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Usuarios y roles</h1>
+  <a href="/control.html">← Panel de control</a>
+  <span class="sp"></span>
+  <span id="me" class="kbd"></span>
+  <a href="/login.html?change=1">Mi contraseña</a>
+  <button class="sm" id="logout">Salir</button>
+</header>
+<main>
+  <section>
+    <h3>Crear usuario</h3>
+    <p class="help">Recibe una contraseña temporal y se le pide cambiarla al entrar. Un usuario puede tener varios roles; <b>Admin</b> puede todo.</p>
+    <form id="create" class="grid">
+      <div><label>Usuario</label><input type="text" id="cu" autocapitalize="none" placeholder="ej. mesa1" required></div>
+      <div><label>Nombre</label><input type="text" id="cn" placeholder="ej. Juan Rivera"></div>
+      <div><label>Contraseña temporal</label><input type="text" id="cp" minlength="6" required></div>
+      <div><button class="go">Crear</button></div>
+      <div style="grid-column:1/-1"><label>Roles</label><div class="roles" id="croles"></div></div>
+    </form>
+    <div class="msg" id="cmsg"></div>
+  </section>
+
+  <section>
+    <h3>Usuarios</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>Usuario</th><th>Nombre</th><th>Roles</th><th>Último acceso</th><th></th></tr></thead>
+      <tbody id="users"></tbody>
+    </table></div>
+    <div class="msg" id="umsg"></div>
+  </section>
+
+  <section>
+    <h3>Qué puede hacer cada rol</h3>
+    <div class="scroll"><table>
+      <tr><td><b>Relojes</b></td><td>Reloj de juego, 24 s, periodos, bocina.</td></tr>
+      <tr><td><b>Anotación</b></td><td>Marcador, faltas, estadísticas, jugadores en cancha, logos y nombres de equipo, plantillas, deshacer.</td></tr>
+      <tr><td><b>Jugada</b></td><td>Posesión, tiempos fuera (y su duración), descansos, FINAL, vista del centro.</td></tr>
+      <tr><td><b>Pantallas</b></td><td>Fondo / plantilla, colores de Líderes y Comparativa, título.</td></tr>
+      <tr><td><b>Admin</b></td><td>Todo lo anterior, más usuarios, reglas de la liga, juego nuevo, borrar plantillas y este registro.</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <h3>Clave para Stream Deck / Companion</h3>
+    <p class="help">Los botones físicos usan <code>/api/cmd?key=CLAVE&amp;a=gameToggle</code>. Si cambias la clave, actualiza los botones.</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><code id="key">…</code><button class="sm" id="newkey">Generar clave nueva</button></div>
+  </section>
+
+  <section>
+    <h3>Registro de actividad</h3>
+    <div class="scroll"><table>
+      <thead><tr><th>Hora</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr></thead>
+      <tbody id="audit"></tbody>
+    </table></div>
+    <button class="sm" id="more" style="margin-top:8px">Ver más</button>
+  </section>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const when = (t) => (t ? new Date(t).toLocaleString('es-PR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+let ROLES = {}, ME = null, limit = 200;
+const api = (url, method = 'GET', body) => fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined })
+  .then(async (r) => { const j = await r.json().catch(() => ({})); if (r.status === 401) location.href = '/login.html?next=/admin.html'; return { ok: r.ok, ...j }; });
+const say = (el, t, ok) => { el.textContent = t; el.classList.toggle('ok', !!ok); };
+const roleBoxes = (name, sel = []) => Object.entries(ROLES).map(([k, v]) =>
+  `<label><input type="checkbox" name="${name}" value="${k}" ${sel.includes(k) ? 'checked' : ''}> ${v}</label>`).join('');
+const checked = (root, name) => [...root.querySelectorAll(`input[name="${name}"]:checked`)].map((i) => i.value);
+
+async function loadUsers() {
+  const r = await api('/api/users'); if (!r.ok) return;
+  ROLES = r.roles;
+  if (!$('#croles').innerHTML) $('#croles').innerHTML = roleBoxes('cr');
+  $('#users').innerHTML = r.users.map((u) => `
+    <tr class="${u.active ? '' : 'off'}" data-id="${u.id}">
+      <td><b>${esc(u.username)}</b>${u.mustChange ? '<span class="tag">debe cambiar contraseña</span>' : ''}${u.active ? '' : '<span class="tag">desactivado</span>'}</td>
+      <td><input type="text" value="${esc(u.name)}" data-f="name"></td>
+      <td><div class="roles">${roleBoxes('r' + u.id, u.roles)}</div></td>
+      <td class="kbd">${when(u.lastLogin)}</td>
+      <td style="white-space:nowrap">
+        <button class="sm go" data-do="save">Guardar</button>
+        <button class="sm" data-do="pw">Contraseña temporal</button>
+        <button class="sm" data-do="toggle">${u.active ? 'Desactivar' : 'Activar'}</button>
+        ${u.id === ME.id ? '' : '<button class="sm stop" data-do="del">Borrar</button>'}
+      </td>
+    </tr>`).join('');
+}
+async function loadAudit() {
+  const r = await api('/api/audit?limit=' + limit);
+  $('#audit').innerHTML = (Array.isArray(r) ? r : []).map((e) =>
+    `<tr><td class="kbd">${when(e.ts)}</td><td>${esc(e.username)}</td><td>${esc(e.action)}</td><td class="kbd">${esc(e.detail || '')}</td></tr>`).join('') ||
+    '<tr><td class="kbd" colspan="4">Sin actividad todavía.</td></tr>';
+}
+async function loadKey() { const r = await api('/api/apikey'); $('#key').textContent = r.key || '—'; }
+
+$('#create').onsubmit = async (e) => {
+  e.preventDefault();
+  const r = await api('/api/users', 'POST', { username: $('#cu').value, name: $('#cn').value, password: $('#cp').value, roles: checked($('#create'), 'cr') });
+  if (!r.ok) return say($('#cmsg'), r.error || 'No se pudo crear');
+  say($('#cmsg'), `Usuario "${$('#cu').value}" creado. Dale la contraseña temporal; la cambiará al entrar.`, true);
+  e.target.reset(); loadUsers(); loadAudit();
+};
+$('#users').onclick = async (e) => {
+  const b = e.target.closest('button[data-do]'); if (!b) return;
+  const tr = b.closest('tr'), id = tr.dataset.id, name = tr.querySelector('b').textContent, m = $('#umsg');
+  let r;
+  if (b.dataset.do === 'save') r = await api('/api/users/' + id, 'POST', { name: tr.querySelector('[data-f=name]').value, roles: checked(tr, 'r' + id) });
+  else if (b.dataset.do === 'toggle') r = await api('/api/users/' + id, 'POST', { active: tr.classList.contains('off') });
+  else if (b.dataset.do === 'pw') {
+    const pw = prompt(`Contraseña temporal para "${name}" (mínimo 6). Se le pedirá cambiarla al entrar:`); if (!pw) return;
+    r = await api('/api/users/' + id, 'POST', { resetPassword: pw });
+  } else if (b.dataset.do === 'del') {
+    if (!confirm(`¿Borrar el usuario "${name}"? No se puede deshacer.`)) return;
+    r = await api('/api/users/' + id, 'DELETE');
+  }
+  if (!r.ok) return say(m, r.error || 'No se pudo');
+  say(m, 'Listo', true); setTimeout(() => say(m, ''), 2000); loadUsers(); loadAudit();
+};
+$('#newkey').onclick = async () => {
+  if (!confirm('¿Generar una clave nueva? Los botones de Stream Deck con la clave anterior dejarán de funcionar.')) return;
+  const r = await api('/api/apikey', 'POST'); $('#key').textContent = r.key || '—'; loadAudit();
+};
+$('#more').onclick = () => { limit += 300; loadAudit(); };
+$('#logout').onclick = async () => { await api('/api/logout', 'POST'); location.href = '/login.html'; };
+
+api('/api/me').then((r) => {
+  if (!r.ok) return;
+  ME = r.user; ROLES = r.roles;
+  $('#me').textContent = `${ME.name || ME.username} (${ME.username})`;
+  loadUsers(); loadAudit(); loadKey();
+});
+</script>
+</body>
+</html>

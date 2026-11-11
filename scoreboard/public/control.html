@@ -38,6 +38,26 @@
   .tag:empty{display:none}
   .pfw{color:#ffd400}.pfx{color:#ff7b72}
   table.games td{text-align:left;padding:4px 6px}
+  .who{display:flex;gap:8px;align-items:center;font-size:12px;color:#8b949e}
+  .who a{color:#58a6ff;text-decoration:none}
+  .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#b62324;color:#fff;padding:10px 16px;border-radius:8px;
+    font-weight:600;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.5);max-width:calc(100% - 32px);opacity:0;pointer-events:none;transition:opacity .2s}
+  .toast.ok{background:#238636}.toast.on{opacity:1}
+  [hidden]{display:none!important}
+  .scr{border:1px solid #30363d;border-radius:8px;padding:10px;margin:8px 0;background:#0d1117}
+  .scr .row>div{min-width:90px}
+  .scr input[type=number]{width:90px}
+  .scr details{margin-top:8px}
+  .scr summary{cursor:pointer;color:#58a6ff;font-size:13px}
+  .scr .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 10px;margin-top:6px}
+  .scr .grid input{width:100%}
+  .scr code{font-size:12px;word-break:break-all}
+  .warnmsg{color:#ff7b72;font-size:12px}
+  .mini{position:relative;width:260px;max-width:100%;background:repeating-conic-gradient(#1c2128 0 25%,#0d1117 0 50%) 0 0/16px 16px;border:1px solid #444c56;border-radius:4px;flex:none;touch-action:none}
+  .mini .r{position:absolute;background:rgba(31,111,235,.85);border:1px solid #fff;border-radius:2px;cursor:grab;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;overflow:hidden;white-space:nowrap}
+  .mini .r.drag{cursor:grabbing;background:rgba(46,160,67,.9)}
+  .nudge{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none}
+  .nudge button{min-width:38px;font-size:15px;padding:5px 8px}
 </style>
 </head>
 <body>
@@ -45,9 +65,11 @@
   <span class="dot" id="dot"></span><span id="status">Conectando…</span>
   <span class="kbd">Pantalla: <code id="durl"></code></span>
   <nav class="roles" id="roles"></nav>
+  <span class="who"><b id="uname"></b><a href="/admin.html" id="adminlink" hidden>Usuarios</a><a href="/login.html?change=1&next=/control.html">Contraseña</a><a href="#" id="logout">Salir</a></span>
   <div class="clocks"><b class="tm" id="ct"></b><span id="plabel"></span><b id="cg">10:00</b><b class="sh" id="cs">24</b></div>
 </header>
 
+<div class="toast" id="toast"></div>
 <main>
 <section class="wide" data-rol="relojes">
   <h3>Relojes (mesa)</h3>
@@ -166,13 +188,8 @@
 </section>
 
 <section class="wide" data-rol="admin">
-  <h3>Ajustes</h3>
+  <h3>Ajustes de la liga (Admin)</h3>
   <div class="row">
-    <div style="flex:2;min-width:220px"><label>Título superior</label><input type="text" data-path="settings.title"></div>
-    <div><label>Centro de la pantalla</label>
-      <select data-path="settings.center"><option value="black">Negro</option><option value="transparent">Transparente (alpha)</option><option value="green">Verde (chroma)</option></select></div>
-    <div><label>Cuadro inferior de cada equipo</label>
-      <select data-path="settings.bottom"><option value="stats">Estadísticas del equipo</option><option value="note">Nota de texto</option></select></div>
     <div><label>Minutos por periodo</label><input type="number" data-path="settings.periodMs" data-type="min"></div>
     <div><label>Minutos de OT</label><input type="number" data-path="settings.otMs" data-type="min"></div>
   </div>
@@ -194,6 +211,30 @@
     <label style="margin:0 0 0 14px">Apagar 24 con menos de <input class="num" type="number" data-path="settings.shotOffMs" data-type="sec" style="width:56px"> s de juego</label>
     <button class="stop" id="reset" style="margin-left:auto">Nuevo juego (reiniciar todo)</button>
   </div>
+</section>
+
+<section class="wide" data-rol="pantallas">
+  <h3>Pantallas: diseño</h3>
+  <h4 style="margin-top:0">Pantallas y tamaños</h4>
+  <div class="kbd">Todas muestran el mismo scoreboard; cada una con su tamaño y proporciones. En OBS usa el enlace de cada pantalla como Fuente de navegador, con el mismo ancho y alto.</div>
+  <div id="screens"></div>
+  <div class="row" style="margin-top:6px">
+    <div style="flex:1;min-width:160px"><label>Nueva pantalla</label><input type="text" id="nsName" placeholder="ej. LED lateral"></div>
+    <div><label>Tamaño</label><select id="nsPreset"></select></div>
+    <div id="nsCustom" hidden style="display:flex;gap:6px">
+      <div><label>Ancho px</label><input type="number" id="nsW" value="1920" style="width:90px"></div>
+      <div><label>Alto px</label><input type="number" id="nsH" value="1080" style="width:90px"></div>
+    </div>
+    <button class="go" id="nsAdd" style="margin-top:18px">Agregar pantalla</button>
+  </div>
+  <h4>General</h4>
+  <div class="row">
+    <div style="flex:2;min-width:220px"><label>Título superior</label><input type="text" data-path="settings.title"></div>
+    <div><label>Centro de la pantalla</label>
+      <select data-path="settings.center"><option value="black">Negro</option><option value="transparent">Transparente (alpha)</option><option value="green">Verde (chroma)</option></select></div>
+    <div><label>Cuadro inferior de cada equipo</label>
+      <select data-path="settings.bottom"><option value="stats">Estadísticas del equipo</option><option value="note">Nota de texto</option></select></div>
+  </div>
   <h4>Fondo / diseño de la pantalla (PNG 1920×1080)</h4>
   <div class="row">
     <input type="file" accept="image/*" data-up="bg:" style="flex:1;min-width:220px">
@@ -213,6 +254,7 @@
     <label style="margin:0"><input type="checkbox" data-path="settings.viewClear" data-type="bool"> Sin fondos (se ve mi plantilla)</label>
     <button class="sm" id="vreset">Colores originales</button>
   </div>
+</section>
 </main>
 
 <script>
@@ -220,12 +262,221 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 let S = null, ws, label = '1 QT';
 let clk = { g: 0, s: 0, gr: false, sr: false, tm: 0, tr: false, at: performance.now() };
-// ---------- roles: control.html?rol=relojes | anotacion | jugada | admin  (sin rol = todo) ----------
-const ROLES = { todo: 'Todo', relojes: 'Relojes', anotacion: 'Anotación', jugada: 'Jugada y pantalla', admin: 'Ajustes' };
-const ROL = ROLES[new URLSearchParams(location.search).get('rol')] ? new URLSearchParams(location.search).get('rol') : 'todo';
-$('#roles').innerHTML = Object.entries(ROLES).map(([k, v]) => `<a href="?rol=${k}" class="${k === ROL ? 'on' : ''}">${v}</a>`).join('');
-if (ROL !== 'todo') $$('section[data-rol]').forEach((s) => { if (s.dataset.rol !== ROL) s.hidden = true; });
-document.title = 'Scoreboard - ' + ROLES[ROL];
+// ---------- usuario y roles: cada quien ve solo lo de sus roles (el servidor también lo revisa) ----------
+// control.html?rol=relojes | anotacion | jugada | pantallas | admin  filtra la vista a uno solo de tus roles
+let ME = null, ROL = 'todo';
+const ROLE_NAMES = { relojes: 'Relojes', anotacion: 'Anotación', jugada: 'Jugada', pantallas: 'Pantallas', admin: 'Ajustes' };
+const isAdmin = () => !!ME && ME.roles.includes('admin');
+const hasRole = (r) => isAdmin() || (!!ME && ME.roles.includes(r));
+function toast(text, ok) {
+  const t = $('#toast'); t.textContent = text; t.classList.toggle('ok', !!ok); t.classList.add('on');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 3500);
+}
+function applyRoles() {
+  const mine = Object.keys(ROLE_NAMES).filter(hasRole);
+  const want = new URLSearchParams(location.search).get('rol');
+  ROL = mine.includes(want) ? want : 'todo';
+  const tabs = [['todo', mine.length === Object.keys(ROLE_NAMES).length ? 'Todo' : 'Mis secciones'], ...mine.map((k) => [k, ROLE_NAMES[k]])];
+  $('#roles').innerHTML = tabs.length > 2 ? tabs.map(([k, v]) => `<a href="?rol=${k}" class="${k === ROL ? 'on' : ''}">${v}</a>`).join('') : '';
+  $$('section[data-rol]').forEach((s) => {
+    if (s.hasAttribute('data-off')) return;                                   // secciones apagadas (rótulo)
+    s.hidden = !hasRole(s.dataset.rol) || (ROL !== 'todo' && s.dataset.rol !== ROL);
+  });
+  $('#uname').textContent = ME.name || ME.username;
+  $('#adminlink').hidden = !isAdmin();
+  document.title = 'Scoreboard - ' + (ROL === 'todo' ? (ME.name || ME.username) : ROLE_NAMES[ROL]);
+}
+// ---------- pantallas (mismo diseño, distintos tamaños) ----------
+const SIZE_PRESETS = [
+  ['1920x1080', 'Full HD 1920×1080'], ['1280x720', 'HD 1280×720'], ['3840x2160', '4K 3840×2160'],
+  ['1280x640', 'P3.91 10×5 gabinetes (1280×640)'], ['1536x768', 'P3.91 12×6 gabinetes (1536×768)'],
+  ['1920x1024', 'P3.91 15×8 gabinetes (1920×1024)'], ['2048x1152', 'P3.91 16×9 gabinetes (2048×1152)'],
+  ['256x768', 'Póster LED 256×768 (1)'], ['512x768', '2 pósters unidos (512×768)'], ['768x768', '3 pósters unidos (768×768)'],
+  ['1024x768', '4 pósters unidos (1024×768)'], ['1536x768', '6 pósters unidos (1536×768)'], ['2048x768', '8 pósters unidos (2048×768)'],
+  ['custom', 'Personalizado (escribe ancho y alto)…'],
+];
+const SCREEN_FIELDS = [['fs', 'Escala de letra %'], ['titleH', 'Alto del título'], ['topH', 'Alto del marcador superior'], ['scoreW', 'Ancho de cada marcador'],
+  ['clockW', 'Ancho del reloj'], ['sideW', 'Ancho de los laterales'], ['statsH', 'Alto de estadísticas (abajo)'], ['stripH', 'Alto de la franja inferior'],
+  ['gapX', 'Separación horizontal'], ['gapY', 'Separación vertical'], ['padX', 'Margen a los lados'], ['padT', 'Margen arriba'], ['padB', 'Margen abajo']];
+$('#nsPreset').innerHTML = SIZE_PRESETS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
+$('#nsPreset').onchange = () => { $('#nsCustom').hidden = $('#nsPreset').value !== 'custom'; };
+$('#nsAdd').onclick = () => {
+  const v = $('#nsPreset').value, [w, h] = v === 'custom' ? [+$('#nsW').value, +$('#nsH').value] : v.split('x').map(Number);
+  if (!(w >= 64 && h >= 64 && w <= 7680 && h <= 4320)) return toast('Tamaño no válido (de 64×64 a 7680×4320)');
+  send({ a: 'screenAdd', name: $('#nsName').value.trim() || undefined, w, h }); $('#nsName').value = '';
+};
+const screenUrl = (sc) => `${location.origin}/display.html${sc.id === 'principal' ? '' : '?p=' + sc.id}`;
+let screensKey = '';
+function renderScreens() {
+  const list = (S && S.settings.screens) || [];
+  const key = list.map((x) => x.id).join(',');
+  if (key !== screensKey) {                     // se redibuja solo si cambia la lista (los valores los llena paint)
+    screensKey = key;
+    $('#screens').innerHTML = list.map((sc, i) => {
+      const P = `settings.screens.${i}`;
+      return `<div class="scr" data-sid="${sc.id}">
+        <div class="row">
+          <div style="flex:1;min-width:160px"><label>Nombre</label><input type="text" data-path="${P}.name"></div>
+          <div><label>Ancho px</label><input type="number" data-path="${P}.w" data-type="int"></div>
+          <div><label>Alto px</label><input type="number" data-path="${P}.h" data-type="int"></div>
+          <div><label>Diseño</label><select data-path="${P}.layout">
+            <option value="auto">Automático (TV si no cabe)</option><option value="full">Tablero completo</option><option value="bug">Marcador tipo TV</option></select></div>
+          <div><label>Atajo de tamaño</label><select data-preset="${i}"><option value="">—</option>${SIZE_PRESETS.filter(([v]) => v !== 'custom').map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></div>
+          <button class="sm" data-fit="${sc.id}" style="margin-top:18px" title="Recalcula márgenes, cajas y letra para el ancho y alto">Ajustar proporciones al tamaño</button>
+          ${sc.id === 'principal' ? '' : `<button class="sm stop" data-sdel="${sc.id}" style="margin-top:18px">Borrar</button>`}
+        </div>
+        <div class="row" style="margin-top:6px"><span class="kbd">OBS:</span> <code>${screenUrl(sc)}</code>
+          <button class="sm" data-copy="${screenUrl(sc)}">Copiar</button><a class="btn sm" href="${screenUrl(sc)}" target="_blank">Abrir</a>
+          <span class="warnmsg" data-sw="${i}"></span></div>
+        <div class="row" style="margin-top:6px"><span class="kbd">Marcador tipo TV (el resto queda transparente para anuncios):</span>
+          <div><label>Estilo</label><select data-path="${P}.bugStyle">
+            <option value="top">Fila de arriba del tablero</option><option value="tv">Banner TV compacto</option></select></div>
+          <div><label>Posición</label><select data-path="${P}.bugPos">
+            <option value="tl">Arriba izquierda</option><option value="tc">Arriba</option><option value="tr">Arriba derecha</option>
+            <option value="ml">Centro izquierda</option><option value="mc">Centro</option><option value="mr">Centro derecha</option>
+            <option value="bl">Abajo izquierda</option><option value="bc">Abajo</option><option value="br">Abajo derecha</option>
+            <option value="free">Libre (arrastrar / X-Y)</option></select></div>
+          <div><label>X %</label><input type="number" min="0" max="100" step="1" data-path="${P}.bugX" data-type="num" title="Posición libre: distancia desde la izquierda"></div>
+          <div><label>Y %</label><input type="number" min="0" max="100" step="1" data-path="${P}.bugY" data-type="num" title="Posición libre: distancia desde arriba"></div>
+          <div><label>Ancho %</label><input type="number" min="3" max="100" data-path="${P}.bugW" data-type="int"></div>
+          <div><label>Alto %</label><input type="number" min="3" max="100" data-path="${P}.bugH" data-type="int"></div>
+          <div><label>Atajo</label><select data-bugpreset="${i}"><option value="">—</option>
+            <option value="bc,50,8">Banner TV abajo (estilo NBA)</option><option value="tc,50,8">Banner TV arriba</option>
+            <option value="bl,40,8">Banner esquina abajo izquierda</option><option value="br,40,8">Banner esquina abajo derecha</option>
+            <option value="tl,40,8">Banner esquina arriba izquierda</option><option value="tr,40,8">Banner esquina arriba derecha</option>
+            <option value="bc,100,10">Franja completa abajo</option><option value="tc,100,25">Franja arriba (póster)</option></select></div>
+          <span class="kbd" data-bugpx="${i}"></span></div>
+        <div class="row" style="margin-top:6px;align-items:flex-start">
+          <div class="mini" data-mini="${i}"><div class="r">TV</div></div>
+          <div class="nudge" data-nudge="${i}">
+            <div><button class="sm" data-mv="0,-1" title="Subir">▲</button></div>
+            <div><button class="sm" data-mv="-1,0" title="Izquierda">◀</button><button class="sm" data-mv="1,0" title="Derecha">▶</button></div>
+            <div><button class="sm" data-mv="0,1" title="Bajar">▼</button></div>
+            <label style="margin:4px 0 0">Paso <select data-step><option value="1">1%</option><option value="5" selected>5%</option><option value="10">10%</option></select></label>
+          </div>
+          <span class="kbd" style="max-width:300px">Arrastra el rectángulo azul para mover el marcador a donde quieras (queda en posición <b>Libre</b>). Lo cuadriculado es lo que queda libre para anuncios.</span></div>
+        <details><summary>Proporciones del tablero completo (px del lienzo)</summary>
+          <div class="grid">${SCREEN_FIELDS.map(([f, t]) => `<div><label>${t}</label><input type="number" data-path="${P}.${f}" data-type="int"></div>`).join('')}</div>
+        </details>
+        <div class="row" style="margin-top:6px"><span class="kbd">Fondo propio de esta pantalla (si no, usa el general):</span>
+          <input type="file" accept="image/*" data-up="sbg:${i}" style="flex:1;min-width:200px">
+          <button class="sm" data-c='{"a":"set","path":"${P}.bg","value":""}'>Usar el general</button>
+          <span class="kbd" data-sbg="${i}"></span></div>
+      </div>`;
+    }).join('');
+  }
+  // avisos: medidas que no caben
+  list.forEach((sc, i) => {
+    const w = $(`[data-sw="${i}"]`), bg = $(`[data-sbg="${i}"]`); if (!w) return;
+    const botH = sc.h - sc.padT - sc.padB - sc.titleH - sc.topH - 2 * sc.gapY;
+    const bad = [];
+    const tv = sc.layout === 'bug' || (sc.layout === 'auto' && Math.min(sc.w / 1920, sc.h / 1080) < 0.55);   // igual que display.html
+    const bw = Math.round(sc.w * sc.bugW / 100), bh = Math.round(sc.h * sc.bugH / 100), bp = $(`[data-bugpx="${i}"]`);
+    drawMini(i, sc);
+
+    const fx = $(`[data-path="settings.screens.${i}.bugX"]`), fy = $(`[data-path="settings.screens.${i}.bugY"]`);
+    if (fx) fx.max = Math.round((100 - sc.bugW) * 10) / 10;
+    if (fy) fy.max = Math.round((100 - sc.bugH) * 10) / 10;
+    const free = sc.bugW >= 100 && sc.bugH >= 100 ? 'nada' : sc.bugW >= 100 ? `${sc.w}×${sc.h - bh} px` : sc.bugH >= 100 ? `${sc.w - bw}×${sc.h} px` : `toda la pantalla menos el marcador (${Math.round(100 - sc.bugW * sc.bugH / 100)}%)`;
+    if (bp) bp.textContent = `= ${bw}×${bh} px; libre para anuncios: ${free}`;
+    const forma = sc.bugStyle === 'tv' ? (bw / bh >= 5 ? 'banner' : bw / bh >= 2.2 ? 'barra' : bw / bh >= 0.8 ? 'caja' : 'vertical')
+      : (bw / bh >= 4.5 ? 'fila del tablero: franja' : bw / bh >= 1.3 ? 'fila del tablero: caja' : 'fila del tablero: póster');
+    if (tv) { w.textContent = '📺 muestra el marcador tipo TV (' + forma + ', ' + bw + '×' + bh + ' px)'; w.style.color = '#58a6ff'; bg.textContent = ''; return; }
+    w.style.color = '';
+    if (sc.w - 2 * sc.padX - 2 * sc.sideW - 2 * sc.gapX < 40) bad.push('los laterales no dejan espacio al centro');
+    if ((sc.w - 2 * sc.padX - 2 * sc.scoreW - sc.clockW) / 2 < 20) bad.push('marcadores + reloj no dejan espacio a los logos');
+    if (botH - sc.statsH - sc.gapY < 60 || botH - sc.stripH - sc.gapY < 40) bad.push('no cabe la parte de abajo');
+    w.textContent = bad.length ? '⚠ ' + bad.join('; ') : '';
+    bg.textContent = sc.bg ? 'fondo propio: ' + sc.bg.split('/').pop() : '';
+  });
+}
+document.addEventListener('change', (e) => {
+  const el = e.target;
+  if (el.dataset && el.dataset.bugpreset != null && el.value) {
+    const [pos, w, h] = el.value.split(','), P = `settings.screens.${el.dataset.bugpreset}`;
+    send({ a: 'set', path: P + '.bugPos', value: pos }); send({ a: 'set', path: P + '.bugW', value: +w }); send({ a: 'set', path: P + '.bugH', value: +h });
+    send({ a: 'set', path: P + '.layout', value: 'bug' }); el.value = '';
+    return;
+  }
+  if (el.dataset && el.dataset.preset != null && el.value) {
+    const sc = S.settings.screens[+el.dataset.preset]; const [w, h] = el.value.split('x').map(Number);
+    send({ a: 'set', path: `settings.screens.${el.dataset.preset}.w`, value: w });
+    send({ a: 'set', path: `settings.screens.${el.dataset.preset}.h`, value: h });
+    send({ a: 'screenFit', id: sc.id }); el.value = '';
+  }
+});
+// ---- X % / Y %: mover en vivo; si la posición era fija, pasa a Libre desde donde estaba ----
+let xyTimer = null;
+document.addEventListener('input', (e) => {
+  const el = e.target, m = /^settings\.screens\.(\d+)\.bug([XY])$/.exec((el.dataset && el.dataset.path) || '');
+  if (!m) return;
+  clearTimeout(xyTimer);
+  xyTimer = setTimeout(() => {
+    let v = parseFloat(el.value); if (isNaN(v)) return;
+    const P = `settings.screens.${m[1]}`, sc = S.settings.screens[+m[1]];
+    const max = Math.round((100 - (m[2] === 'X' ? sc.bugW : sc.bugH)) * 10) / 10;   // más allá, el marcador ya está en el borde
+    if (v > max || v < 0) { v = Math.max(0, Math.min(max, v)); el.value = v; }
+    if (sc.bugPos !== 'free') send({ a: 'set', path: P + '.bugPos', value: 'free' });   // primero Libre, después el valor
+    send({ a: 'set', path: `${P}.bug${m[2]}`, value: Math.max(0, Math.min(100, v)) });
+  }, 120);
+});
+// ---- botones ◀ ▲ ▼ ▶: mueven el marcador el paso elegido ----
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-mv]'); if (!b) return;
+  const box = b.closest('[data-nudge]'), i = +box.dataset.nudge, sc = S.settings.screens[i], step = +box.querySelector('[data-step]').value;
+  const [dx, dy] = b.dataset.mv.split(',').map(Number), P = `settings.screens.${i}`, r1 = (v) => Math.round(v * 10) / 10;
+  const x = r1(Math.max(0, Math.min(100 - sc.bugW, sc.bugX + dx * step))), y = r1(Math.max(0, Math.min(100 - sc.bugH, sc.bugY + dy * step)));
+  if (x === sc.bugX && y === sc.bugY) return toast('Ya está en el borde');
+  if (sc.bugPos !== 'free') send({ a: 'set', path: P + '.bugPos', value: 'free' });
+  if (x !== sc.bugX) send({ a: 'set', path: P + '.bugX', value: x });
+  if (y !== sc.bugY) send({ a: 'set', path: P + '.bugY', value: y });
+});
+// ---- miniatura: arrastrar el marcador tipo TV a cualquier lugar ----
+let miniDrag = null;
+function bugRect(sc) {                       // mismo cálculo que display.html, en px de la pantalla
+  const bw = sc.w * sc.bugW / 100, bh = sc.h * sc.bugH / 100, p = sc.bugPos;
+  let x = p[1] === 'l' ? 0 : p[1] === 'r' ? sc.w - bw : (sc.w - bw) / 2, y = p[0] === 't' ? 0 : p[0] === 'b' ? sc.h - bh : (sc.h - bh) / 2;
+  if (p === 'free') { x = Math.min(sc.w - bw, Math.max(0, sc.w * sc.bugX / 100)); y = Math.min(sc.h - bh, Math.max(0, sc.h * sc.bugY / 100)); }
+  return { x, y, w: bw, h: bh };
+}
+function drawMini(i, sc) {
+  const m = $(`[data-mini="${i}"]`); if (!m) return;
+  // miniatura de máximo 260×200 px con la forma de la pantalla
+  const W = Math.max(30, Math.min(260, 200 * sc.w / sc.h)); m.style.width = W + 'px'; m.style.height = Math.max(20, W * sc.h / sc.w) + 'px';
+  if (miniDrag && miniDrag.i === i) return;   // mientras se arrastra, manda el mouse
+  const k = W / sc.w, r = bugRect(sc), el = m.firstElementChild;
+  Object.assign(el.style, { left: r.x * k + 'px', top: r.y * k + 'px', width: Math.max(4, r.w * k) + 'px', height: Math.max(4, r.h * k) + 'px' });
+}
+document.addEventListener('pointerdown', (e) => {
+  const el = e.target.closest('.mini .r'); if (!el) return;
+  const m = el.parentElement, i = +m.dataset.mini, box = m.getBoundingClientRect(), r = el.getBoundingClientRect();
+  miniDrag = { i, m, el, dx: e.clientX - r.left, dy: e.clientY - r.top, box };
+  el.classList.add('drag'); el.setPointerCapture(e.pointerId); e.preventDefault();
+});
+document.addEventListener('pointermove', (e) => {
+  if (!miniDrag) return;
+  const { el, box, dx, dy } = miniDrag;
+  const x = Math.min(box.width - el.offsetWidth, Math.max(0, e.clientX - box.left - dx));
+  const y = Math.min(box.height - el.offsetHeight, Math.max(0, e.clientY - box.top - dy));
+  el.style.left = x + 'px'; el.style.top = y + 'px';
+  miniDrag.x = x / box.width * 100; miniDrag.y = y / box.height * 100;
+});
+document.addEventListener('pointerup', () => {
+  if (!miniDrag) return;
+  const { i, el, x, y } = miniDrag; el.classList.remove('drag'); miniDrag = null;
+  if (x == null) return;                       // solo fue un clic
+  const P = `settings.screens.${i}`;
+  send({ a: 'set', path: P + '.bugPos', value: 'free' });
+  send({ a: 'set', path: P + '.bugX', value: Math.round(x * 10) / 10 });
+  send({ a: 'set', path: P + '.bugY', value: Math.round(y * 10) / 10 });
+});
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-fit],[data-sdel],[data-copy]'); if (!b) return;
+  if (b.dataset.fit) { if (confirm('¿Recalcular márgenes, cajas y letra para este tamaño? Se pierden los ajustes manuales de proporciones.')) send({ a: 'screenFit', id: b.dataset.fit }); }
+  else if (b.dataset.sdel) { if (confirm('¿Borrar esta pantalla? Su enlace de OBS dejará de mostrarla (mostrará la Principal).')) send({ a: 'screenDel', id: b.dataset.sdel }); }
+  else if (b.dataset.copy) { navigator.clipboard && navigator.clipboard.writeText(b.dataset.copy).then(() => toast('Enlace copiado', true), () => toast(b.dataset.copy, true)); }
+});
+$('#logout').onclick = async (e) => { e.preventDefault(); await fetch('/api/logout', { method: 'POST' }); location.href = '/login.html'; };
 const get = (p) => p.split('.').reduce((o, k) => (o == null ? o : o[k]), S);
 const send = (o) => ws && ws.readyState === 1 && ws.send(JSON.stringify({ t: 'cmd', ...o }));
 $('#durl').textContent = `${location.origin}/display.html`;
@@ -310,6 +561,8 @@ document.addEventListener('change', (e) => {
   else if (ty === 'min') v = Math.max(0, Math.round(parseFloat(v) * 60000));
   else if (ty === 'sec') v = Math.max(0, Math.round(parseFloat(v) * 1000));
   else if (ty === 'int') v = Math.max(0, parseInt(v, 10) || 0);
+  else if (ty === 'num') v = Math.max(0, parseFloat(v) || 0);
+  if (/\.bug[XY]$/.test(p)) return;                 // X/Y los maneja el evento 'input' (en vivo)
   send({ a: 'set', path: p, value: v });
 });
 // colores originales de Líderes / Comparativa
@@ -322,12 +575,14 @@ document.addEventListener('change', async (e) => {
   const [kind, team] = el.dataset.up.split(':'), f = el.files[0], msg = $('#uploadmsg');
   const ext = ((f.name.split('.').pop() || '').toLowerCase()) || 'png';
   try {
-    const r = await fetch(`/api/upload?kind=${kind}&team=${team}&ext=${ext}`, { method: 'POST', body: f });
+    const r = await fetch(`/api/upload?kind=${kind === 'sbg' ? 'bg' : kind}&team=${kind === 'sbg' ? 'screen' : team}&ext=${ext}`, { method: 'POST', body: f });
     const j = await r.json(); if (!j.ok) throw new Error(j.error || 'error');
-    send(kind === 'logo' ? { a: 'set', path: `teams.${team}.logo`, value: j.path } : { a: 'set', path: 'settings.bgImage', value: j.path });
+    if (kind === 'sbg') send({ a: 'set', path: `settings.screens.${team}.bg`, value: j.path });
+    else send(kind === 'logo' ? { a: 'set', path: `teams.${team}.logo`, value: j.path } : { a: 'set', path: 'settings.bgImage', value: j.path });
     if (kind === 'bg') send({ a: 'set', path: 'settings.bgOnly', value: true });
     if (msg) msg.textContent = 'Imagen cargada: ' + f.name;
-  } catch (err) { if (msg) msg.textContent = 'No se pudo subir: ' + err.message; }
+    toast('Imagen cargada: ' + f.name, true);
+  } catch (err) { if (msg) msg.textContent = 'No se pudo subir: ' + err.message; toast('No se pudo subir: ' + err.message); }
   el.value = '';
 });
 $('#setgame').onclick = () => send({ a: 'gameSet', ms: (+$('#setm').value * 60 + +$('#sets').value) * 1000 });
@@ -339,7 +594,7 @@ addEventListener('keydown', (e) => {
   const keys = { ' ': ['relojes', { a: 'gameToggle' }], '1': ['relojes', { a: 'shotReset', ms: 24000 }], '2': ['relojes', { a: 'shotReset', ms: 14000 }],
     s: ['relojes', { a: 'shotToggle' }], p: ['jugada', { a: 'possessionToggle' }], z: ['anotacion', { a: 'undo' }] };
   const k = keys[e.key.toLowerCase()];
-  if (k && (ROL === 'todo' || ROL === k[0])) { e.preventDefault(); send(k[1]); }
+  if (k && hasRole(k[0]) && (ROL === 'todo' || ROL === k[0])) { e.preventDefault(); send(k[1]); }
 });
 
 // ---------- estado ----------
@@ -409,13 +664,19 @@ function connect() {
     if (m.t === 'state') {
       S = m.s; label = m.label;
       clk = { g: S.game.ms, s: S.shot.ms, gr: S.game.running, sr: S.shot.running, tm: S.timer.ms, tr: S.timer.running, at: performance.now() };
-      paint();
+      renderScreens(); paint();
       clearTimeout(gt); gt = setTimeout(loadLists, 800);   // el historial cambia con el marcador
     } else if (m.t === 'clock') clk = { g: m.g, s: m.s, gr: m.gr, sr: m.sr, tm: m.tm, tr: m.tr, at: performance.now() };
     else if (m.t === 'lists') loadLists();
+    else if (m.t === 'err') { toast(m.msg); if (m.login) setTimeout(() => { location.href = '/login.html?next=/control.html'; }, 1500); }
   };
 }
-connect();
+// primero se sabe quién es el usuario, después se conecta
+fetch('/api/me').then((r) => (r.ok ? r.json() : Promise.reject())).then((r) => {
+  ME = r.user;
+  if (ME.mustChange) { location.href = '/login.html?change=1'; return; }
+  applyRoles(); connect();
+}).catch(() => { location.href = '/login.html?next=' + encodeURIComponent(location.pathname + location.search); });
 </script>
 </body>
 </html>

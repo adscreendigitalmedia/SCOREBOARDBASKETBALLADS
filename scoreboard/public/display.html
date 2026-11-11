@@ -4,72 +4,73 @@
 <meta charset="utf-8">
 <title>Scoreboard - Pantalla</title>
 <style>
+  :root{--fs:1;--W:1920px;--H:1080px}
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#fff;
     font-family:"Arial Narrow","Segoe UI",Arial,sans-serif;font-weight:800}
   html.transparent,html.transparent body,body.transparent{background:transparent}
-  #stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;
-    /* medidas = plantilla led_scoreboard_layout_vacio.png (1920x1080) */
-    display:grid;grid-template-rows:52px 243px 713px;row-gap:17px;padding:18px 25px 20px;
+  /* medidas de la pantalla elegida (display.html?p=<id>); la Principal = plantilla led_scoreboard_layout_vacio.png 1920x1080 */
+  #stage{position:absolute;left:0;top:0;width:var(--W);height:var(--H);transform-origin:0 0;
+    display:grid;grid-template-rows:var(--titleH) var(--topH) var(--botH);row-gap:var(--gapY);padding:var(--padT) var(--padX) var(--padB);
     background:linear-gradient(#060b2b,#000)}
   body.transparent #stage{background:none}
 
   /* barra superior = franja roja cuando suena la bocina (fin de periodo / 24 s / tiempo cumplido) */
-  .title{background:linear-gradient(#0a2fb8,#06196b);border-bottom:3px solid #fff;
-    display:flex;align-items:center;justify-content:center;font-size:36px;letter-spacing:2px}
+  .title{overflow:hidden;background:linear-gradient(#0a2fb8,#06196b);border-bottom:calc(3px*var(--fs)) solid #fff;
+    display:flex;align-items:center;justify-content:center;font-size:calc(36px*var(--fs));letter-spacing:calc(2px*var(--fs))}
   /* contorno rojo alrededor de TODO el diseño (como las luces del tablero NBA) cuando suena la bocina */
   .frame{position:absolute;inset:0;pointer-events:none;z-index:50;opacity:0;transition:opacity .12s;
-    border:16px solid #ff1414;
-    box-shadow:inset 0 0 0 3px #ff9a9a, inset 0 0 26px 4px rgba(255,20,20,.75)}
+    border:calc(16px*var(--fs)) solid #ff1414;
+    box-shadow:inset 0 0 0 calc(3px*var(--fs)) #ff9a9a, inset 0 0 calc(26px*var(--fs)) calc(4px*var(--fs)) rgba(255,20,20,.75)}
   .frame.on{opacity:1}
 
   /* fila superior con medidas fijas: el tamaño del logo (o del texto) nunca mueve marcador ni reloj */
-  .top{display:grid;grid-template-columns:435px 275px 450px 275px 435px;grid-template-rows:100%;height:243px;min-height:0;overflow:hidden;border-bottom:3px solid #fff}
+  .top{display:grid;grid-template-columns:var(--logoW) var(--scoreW) var(--clockW) var(--scoreW) var(--logoW);grid-template-rows:100%;height:var(--topH);min-height:0;overflow:hidden;border-bottom:calc(3px*var(--fs)) solid #fff}
   .top>*{min-width:0;min-height:0;overflow:hidden}
   .teamhead{background:linear-gradient(135deg,#0a2fb8,#1b4bff 60%,#0a2fb8);display:flex;align-items:center;justify-content:center;position:relative}
   .teamhead img{position:absolute;left:7.5%;top:7.5%;width:85%;height:85%;object-fit:contain}
-  .teamhead .ph{font-size:120px;opacity:.9;white-space:nowrap}
+  .teamhead .ph{font-size:calc(120px*var(--fs));opacity:.9;white-space:nowrap}
   .scorebox{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center}
-  .sc{font-size:168px;line-height:1;font-variant-numeric:tabular-nums}
-  .qs{display:flex;gap:12px;margin-top:8px;min-height:44px}
-  .qs span{display:flex;flex-direction:column;align-items:center;line-height:1;font-size:30px;font-variant-numeric:tabular-nums}
-  .qs i{font-style:normal;font-size:17px;color:#9db4ff;margin-bottom:3px}
+  .sc{font-size:calc(168px*var(--fs));line-height:1;font-variant-numeric:tabular-nums}
+  .qs{display:flex;gap:calc(12px*var(--fs));margin-top:calc(8px*var(--fs));min-height:calc(44px*var(--fs))}
+  .qs span{display:flex;flex-direction:column;align-items:center;line-height:1;font-size:calc(30px*var(--fs));font-variant-numeric:tabular-nums}
+  .qs i{font-style:normal;font-size:calc(17px*var(--fs));color:#9db4ff;margin-bottom:calc(3px*var(--fs))}
 
   .mid{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center}
-  .clockrow{display:flex;align-items:center;justify-content:center;gap:12px}
-  #gclock{font-size:104px;line-height:1;font-variant-numeric:tabular-nums}
+  .clockrow{display:flex;align-items:center;justify-content:center;gap:calc(12px*var(--fs))}
+  #gclock{font-size:calc(104px*var(--fs));line-height:1;font-variant-numeric:tabular-nums}
   /* flechas de posesión junto al reloj */
-  .tri{width:0;height:0;border-top:24px solid transparent;border-bottom:24px solid transparent}
-  .tri.l{border-right:36px solid #1a2250}
-  .tri.r{border-left:36px solid #1a2250}
-  .tri.l.on{border-right-color:#ffd400;filter:drop-shadow(0 0 10px #ffd400)}
-  .tri.r.on{border-left-color:#ffd400;filter:drop-shadow(0 0 10px #ffd400)}
-  #period{font-size:44px;line-height:1.05}
+  .tri{width:0;height:0;border-top:calc(24px*var(--fs)) solid transparent;border-bottom:calc(24px*var(--fs)) solid transparent}
+  .tri.l{border-right:calc(36px*var(--fs)) solid #1a2250}
+  .tri.r{border-left:calc(36px*var(--fs)) solid #1a2250}
+  .tri.l.on{border-right-color:#ffd400;filter:drop-shadow(0 0 calc(10px*var(--fs)) #ffd400)}
+  .tri.r.on{border-left-color:#ffd400;filter:drop-shadow(0 0 calc(10px*var(--fs)) #ffd400)}
+  #period{font-size:calc(44px*var(--fs));line-height:1.05}
   #period.final{color:#ff3b30}
-  #sclock{font-size:60px;line-height:1;color:#ffd400;font-variant-numeric:tabular-nums;min-height:60px}
+  #sclock{font-size:calc(60px*var(--fs));line-height:1;color:#ffd400;font-variant-numeric:tabular-nums;min-height:calc(60px*var(--fs))}
   #sclock.low{color:#ff3b30}
   #gclock.tmode{color:#ffd400}
   #gclock.tmode.low{color:#ff3b30}
   .flash{animation:fl .25s steps(2) 6}
   @keyframes fl{50%{background:#ff3b30;color:#fff}}
 
-  .bottom{display:grid;grid-template-columns:482px 870px 482px;column-gap:18px;min-height:0}
-  .col{display:flex;flex-direction:column;gap:17px;min-height:0}
-  .panel{border:3px solid #fff;background:#000;height:503px;display:flex;flex-direction:column;overflow:hidden}
-  .panel h2{background:linear-gradient(#0a2fb8,#06196b);text-align:center;font-size:56px;height:70px;line-height:67px;border-bottom:3px solid #fff;flex:none;white-space:nowrap;overflow:hidden}
-  table{width:calc(100% - 18px);margin:0 9px;border-collapse:collapse;table-layout:fixed}
-  th{background:#0a2fb8;font-size:26px;height:50px;border:2px solid #1b4bff}
-  td{height:62px;border:2px solid #1b4bff;text-align:center;font-size:40px;font-variant-numeric:tabular-nums}
-  td.nm{text-align:left;padding-left:10px;font-size:28px;white-space:nowrap;overflow:hidden}
+  .bottom{display:grid;grid-template-columns:var(--sideW) var(--centerW) var(--sideW);column-gap:var(--gapX);min-height:0}
+  .col{display:flex;flex-direction:column;gap:var(--gapY);min-height:0}
+  .panel{border:calc(3px*var(--fs)) solid #fff;background:#000;height:var(--panelH);display:flex;flex-direction:column;overflow:hidden}
+  .panel h2{background:linear-gradient(#0a2fb8,#06196b);text-align:center;font-size:calc(56px*var(--fs));height:calc(70px*var(--fs));line-height:calc(67px*var(--fs));border-bottom:calc(3px*var(--fs)) solid #fff;flex:none;white-space:nowrap;overflow:hidden}
+  table{width:calc(100% - calc(18px*var(--fs)));margin:0 calc(9px*var(--fs));border-collapse:collapse;table-layout:fixed}
+  th{background:#0a2fb8;font-size:calc(26px*var(--fs));height:calc(50px*var(--fs));border:calc(2px*var(--fs)) solid #1b4bff}
+  td{height:calc(62px*var(--fs));border:calc(2px*var(--fs)) solid #1b4bff;text-align:center;font-size:calc(40px*var(--fs));font-variant-numeric:tabular-nums}
+  td.nm{text-align:left;padding-left:calc(10px*var(--fs));font-size:calc(28px*var(--fs));white-space:nowrap;overflow:hidden}
   td.pn{line-height:1;padding:0}
-  td.pn b{display:block;font-size:30px;line-height:34px}
-  td.pn i{display:block;font-style:normal;font-size:14px;line-height:16px;letter-spacing:0;color:#9db4ff}
+  td.pn b{display:block;font-size:calc(30px*var(--fs));line-height:calc(34px*var(--fs))}
+  td.pn i{display:block;font-style:normal;font-size:calc(14px*var(--fs));line-height:calc(16px*var(--fs));letter-spacing:0;color:#9db4ff}
   /* nombre + faltas: el número de faltas tiene su espacio fijo a la derecha; si el nombre es largo se recorta con "…" */
-  td.nm{padding-right:6px}
-  td.nm .nmw{display:flex;align-items:center;gap:6px;min-width:0}
+  td.nm{padding-right:calc(6px*var(--fs))}
+  td.nm .nmw{display:flex;align-items:center;gap:calc(6px*var(--fs));min-width:0}
   td.nm .nmt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   td.nm .nmt.wrap{white-space:normal;text-overflow:clip;line-height:1.02;overflow-wrap:anywhere}
-  td.nm .pf{flex:none;min-width:26px;height:26px;line-height:26px;padding:0 5px;border-radius:13px;font-size:19px;text-align:center;
+  td.nm .pf{flex:none;min-width:calc(26px*var(--fs));height:calc(26px*var(--fs));line-height:calc(26px*var(--fs));padding:0 calc(5px*var(--fs));border-radius:calc(13px*var(--fs));font-size:calc(19px*var(--fs));text-align:center;
     background:rgba(255,255,255,.18);color:#fff;font-variant-numeric:tabular-nums}
   td.nm.pfw .pf{background:#ffd400;color:#000}
   td.nm.pfx .pf{background:#ff3b30;color:#fff}
@@ -77,23 +78,23 @@
   td.pfx{color:#ff3b30}
   /* columnas: # 10%, PTS/REB/AST 13% cada una, el nombre se queda con el resto (~51%) */
   th.pn{width:10%}
-  th.c{width:13%;font-size:22px}
-  td.c{font-size:34px}
-  .foot{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0;border-top:3px solid #fff}
-  .foot div{display:flex;align-items:center;justify-content:center;gap:16px;font-size:36px}
+  th.c{width:13%;font-size:calc(22px*var(--fs))}
+  td.c{font-size:calc(34px*var(--fs))}
+  .foot{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0;border-top:calc(3px*var(--fs)) solid #fff}
+  .foot div{display:flex;align-items:center;justify-content:center;gap:calc(16px*var(--fs));font-size:calc(36px*var(--fs))}
   .foot div.bonus{background:#c8102e;animation:bn 1s steps(2) infinite}
   @keyframes bn{50%{background:#8a0a20}}
-  .foot b{font-size:50px}
+  .foot b{font-size:calc(50px*var(--fs))}
   /* cuadro inferior: estadísticas de equipo (o nota de texto) */
-  .tbox{flex:1;min-height:0;border:3px solid #fff;background:#000;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:1fr 1fr;overflow:hidden}
-  .tbox.text{display:flex;align-items:center;justify-content:center;font-size:34px;text-align:center;padding:6px}
-  .cell{min-width:0;overflow:hidden;border:1px solid #1b4bff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
-  .cell i{font-style:normal;font-size:17px;color:#9db4ff;margin-bottom:5px;white-space:nowrap}
-  .cell b{font-size:38px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tbox{flex:1;min-height:0;border:calc(3px*var(--fs)) solid #fff;background:#000;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:1fr 1fr;overflow:hidden}
+  .tbox.text{display:flex;align-items:center;justify-content:center;font-size:calc(34px*var(--fs));text-align:center;padding:calc(6px*var(--fs))}
+  .cell{min-width:0;overflow:hidden;border:calc(1px*var(--fs)) solid #1b4bff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+  .cell i{font-style:normal;font-size:calc(17px*var(--fs));color:#9db4ff;margin-bottom:calc(5px*var(--fs));white-space:nowrap}
+  .cell b{font-size:calc(38px*var(--fs));font-variant-numeric:tabular-nums;white-space:nowrap}
 
-  .center{display:grid;grid-template-rows:560px 137px;gap:16px;min-height:0}
-  .media{border:3px solid #fff;background:#000;position:relative;overflow:hidden}
-  .strip{border:3px solid #fff;background:#000}
+  .center{display:grid;grid-template-rows:var(--mediaH) var(--stripH);gap:var(--gapY);min-height:0}
+  .media{border:calc(3px*var(--fs)) solid #fff;background:#000;position:relative;overflow:hidden}
+  .strip{border:calc(3px*var(--fs)) solid #fff;background:#000}
   body.cg .media,body.cg .strip{background:#00b140}
   body.transparent .media,body.transparent .strip{background:transparent}
 
@@ -101,17 +102,17 @@
   /* colores editables desde el panel (Ajustes → Colores de Líderes / Comparativa) */
   :root{--vbg:#050a24;--vhead:#0a2fb8;--vteams:#0a2fb8;--vline:#1b4bff;--vlabel:#9db4ff;--vlead:#ffd400;--vtext:#fff}
   .view{position:absolute;inset:0;display:flex;flex-direction:column;color:var(--vtext);background:linear-gradient(rgba(0,0,0,0),#000),var(--vbg)}
-  .view h3{background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.45)),var(--vhead);border-bottom:3px solid var(--vline);text-align:center;font-size:44px;height:64px;line-height:61px;letter-spacing:2px}
-  .vteams{display:grid;grid-template-columns:1fr 200px 1fr;height:56px;align-items:center;text-align:center;font-size:34px;background:var(--vteams)}
+  .view h3{background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.45)),var(--vhead);border-bottom:calc(3px*var(--fs)) solid var(--vline);text-align:center;font-size:calc(44px*var(--fs));height:calc(64px*var(--fs));line-height:calc(61px*var(--fs));letter-spacing:calc(2px*var(--fs))}
+  .vteams{display:grid;grid-template-columns:1fr calc(200px*var(--fs)) 1fr;height:calc(56px*var(--fs));align-items:center;text-align:center;font-size:calc(34px*var(--fs));background:var(--vteams)}
   .vrows{flex:1;min-height:0;overflow:hidden;display:grid;grid-auto-rows:minmax(0,1fr)}
-  .vrow{display:grid;grid-template-columns:1fr 200px 1fr;align-items:center;text-align:center;border-bottom:2px solid var(--vline)}
+  .vrow{display:grid;grid-template-columns:1fr calc(200px*var(--fs)) 1fr;align-items:center;text-align:center;border-bottom:calc(2px*var(--fs)) solid var(--vline)}
   .vrow:last-child{border-bottom:0}
-  .vrow .lab{font-size:26px;color:var(--vlabel);white-space:nowrap}
-  .vrow .val{font-size:40px;line-height:1;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center;gap:12px}
-  .vrow .val small{font-size:22px;color:var(--vlabel)}
+  .vrow .lab{font-size:calc(26px*var(--fs));color:var(--vlabel);white-space:nowrap}
+  .vrow .val{font-size:calc(40px*var(--fs));line-height:1;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center;gap:calc(12px*var(--fs))}
+  .vrow .val small{font-size:calc(22px*var(--fs));color:var(--vlabel)}
   .vrow .val.lead{color:var(--vlead)}
-  .lrow .val{font-size:30px;gap:0}
-  .lrow .val b{font-size:56px;margin-left:12px;color:var(--vlead);font-variant-numeric:tabular-nums}
+  .lrow .val{font-size:calc(30px*var(--fs));gap:0}
+  .lrow .val b{font-size:calc(56px*var(--fs));margin-left:calc(12px*var(--fs));color:var(--vlead);font-variant-numeric:tabular-nums}
   /* sin fondos: se ve la plantilla de fondo debajo de las vistas */
   html.vclear .view,html.vclear .view h3,html.vclear .vteams{background:transparent}
   html.vclear .media{background:transparent}
@@ -124,7 +125,49 @@
   html.bgonly .title,html.bgonly .teamhead,html.bgonly .scorebox,html.bgonly .mid,html.bgonly .panel,html.bgonly .panel h2,
   html.bgonly th,html.bgonly .tbox,html.bgonly .media,html.bgonly .strip,html.bgonly .top{background:transparent!important;border-color:transparent!important}
   html.bgonly td,html.bgonly th,html.bgonly .cell,html.bgonly .foot{border-color:transparent!important}
-  .bar{width:680px;height:22px;background:#1a2250;border:2px solid #fff}
+  .bar{width:calc(680px*var(--fs));height:calc(22px*var(--fs));background:#1a2250;border:calc(2px*var(--fs)) solid #fff}
+
+  /* ===== marcador tipo TV (pantallas chicas o "Marcador tipo TV") =====
+     Tres diseños de referencia (ancho / caja / vertical) que se escalan para llenar la pantalla. */
+  #bug{position:absolute;inset:0;display:none;overflow:hidden}
+  html.bugmode #bug{display:block}
+  html.bugmode #stage>.title,html.bugmode #stage>.top,html.bugmode #stage>.bottom{display:none}
+  /* estilo "fila de arriba": la misma fila superior del tablero, en chico y donde se quiera */
+  html.bugtop #stage>.top{display:grid;position:absolute;transform-origin:0 0;z-index:5;width:1870px;
+    --logoW:435px;--scoreW:275px;--clockW:450px;--topH:243px;--fs:1;background-repeat:no-repeat}
+  html.bugtop #bug{display:none}
+  /* formas caja y póster: mismas piezas de la fila de arriba, reacomodadas */
+  html.bugtop #stage>.top.alt{border:3px solid #6c717a;border-radius:16px;gap:2px;background:#3a3e46;overflow:hidden}
+  html.bugtop #stage>.top.alt>:nth-child(1){grid-area:lh}html.bugtop #stage>.top.alt>:nth-child(2){grid-area:sh}
+  html.bugtop #stage>.top.alt>:nth-child(3){grid-area:m}html.bugtop #stage>.top.alt>:nth-child(4){grid-area:sa}
+  html.bugtop #stage>.top.alt>:nth-child(5){grid-area:la}
+  html.bugtop #stage>.top.alt.tpl>*{background:#0b0c0f}           /* con tu plantilla: imita su estilo oscuro */
+  html.bugtop #stage>.top.alt .mid{gap:calc(4px*var(--fs))}
+  /* el pedazo de la plantilla que corresponde a la fila de arriba (zona 25,87 del lienzo 1920x1080), en una capa debajo */
+  html.bugtop #stage>.top::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:var(--topbg,none) -25px -87px/1920px 1080px no-repeat}
+  html.bugmode #stage{padding:0}
+  html.bugmode,html.bugmode body,html.bugmode #stage{background:transparent!important}   /* el resto queda libre para anuncios */
+  html.layer-stats #bug{visibility:hidden}
+  .bugin{position:absolute;left:0;top:0;transform-origin:0 0;display:grid;color:var(--vtext);font-weight:800}
+  .bugin .b{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;overflow:hidden;white-space:nowrap;line-height:1}
+  .bugin .tm{background:linear-gradient(rgba(255,255,255,.08),rgba(0,0,0,.35)),var(--vhead)}
+  .bugin .dark{background:#000}
+  .bugin .lg{background:linear-gradient(135deg,var(--vhead),var(--vline))}
+  .bugin .lg img{max-width:86%;max-height:86%;object-fit:contain}
+  .bugin .lg .ph{font-size:.9em;opacity:.9}
+  .bugin .sc{font-variant-numeric:tabular-nums}
+  .bugin .clk{font-variant-numeric:tabular-nums}
+  .bugin .clk.tmode{color:#ffd400}.bugin .clk.low{color:#ff3b30}
+  .bugin .sh{color:#ffd400;font-variant-numeric:tabular-nums}.bugin .sh.low{color:#ff3b30}
+  .bugin .per.final{color:#ff3b30}
+  .bugin .nm{flex-direction:column;gap:.12em}
+  .bugin .nm .n{overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .bugin .info{display:flex;gap:.5em;align-items:center;font-size:.42em;color:var(--vlabel)}
+  .bugin .info .bon{background:#c8102e;color:#fff;padding:.08em .35em;border-radius:.2em;animation:bn 1s steps(2) infinite}
+  .bugin .info .bon:empty{display:none}
+  .bugin .poss{color:#1a2250}.bugin .poss.on{color:#ffd400;text-shadow:0 0 .3em #ffd400}
+  .bugin .ln{border:3px solid #fff}
 </style>
 </head>
 <body>
@@ -146,6 +189,7 @@
     <div class="center"><div class="media" id="media"></div><div class="strip"></div></div>
     <div class="col"><div class="panel" id="apanel"></div><div class="tbox" id="anote"></div></div>
   </div>
+  <div id="bug"><div class="bugin" id="bugin"></div></div>
   <div class="frame" id="frame"></div>
 </div>
 
@@ -158,8 +202,158 @@ const HORN_MS = 4000;
 let S = null, label = '1 QT';
 let clk = { g: 600000, s: 24000, gr: false, sr: false, tm: 0, tr: false, at: performance.now() };
 
-// ---- escalado a la ventana (stage fijo 1920x1080) ----
-function fit() { $('stage').style.transform = `scale(${Math.min(innerWidth / 1920, innerHeight / 1080)})`; }
+// ---- pantalla elegida: display.html?p=<id>  (sin p = Principal) ----
+const SCREEN_ID = new URLSearchParams(location.search).get('p') || 'principal';
+let SCR = { w: 1920, h: 1080, fs: 100 };
+function screenOf(set) {
+  const list = (set && set.screens) || [];
+  return list.find((x) => x.id === SCREEN_ID) || list.find((x) => x.id === 'principal') || list[0] || SCR;
+}
+function applyScreen(sc) {
+  SCR = sc;
+  const st = $('stage').style, px = (v) => Math.max(0, Math.round(v)) + 'px';
+  const botH = sc.h - sc.padT - sc.padB - sc.titleH - sc.topH - 2 * sc.gapY;
+  const v = { W: sc.w, H: sc.h, padT: sc.padT, padB: sc.padB, padX: sc.padX, titleH: sc.titleH, topH: sc.topH, botH, gapY: sc.gapY, gapX: sc.gapX,
+    scoreW: sc.scoreW, clockW: sc.clockW, logoW: (sc.w - 2 * sc.padX - 2 * sc.scoreW - sc.clockW) / 2,
+    sideW: sc.sideW, centerW: sc.w - 2 * sc.padX - 2 * sc.sideW - 2 * sc.gapX,
+    panelH: botH - sc.statsH - sc.gapY, mediaH: botH - sc.stripH - sc.gapY, stripH: sc.stripH };
+  for (const [k, val] of Object.entries(v)) st.setProperty('--' + k, px(val));
+  st.setProperty('--fs', sc.fs / 100);
+  $('title').style.visibility = sc.titleH > 0 ? '' : 'hidden';
+  document.documentElement.classList.toggle('bugmode', bugMode(sc));
+  document.documentElement.classList.toggle('bugtop', bugMode(sc) && sc.bugStyle !== 'tv');
+  if (!(bugMode(sc) && sc.bugStyle !== 'tv')) { const t = document.querySelector('#stage>.top'); t.removeAttribute('style'); t.classList.remove('alt', 'tpl'); }
+  if (!bugMode(sc)) $('frame').removeAttribute('style');
+  document.title = 'Scoreboard - ' + (sc.name || 'Pantalla') + ` (${sc.w}×${sc.h})`;
+  fit();
+}
+// ---- marcador tipo TV ----
+// Diseño de la pantalla: full = tablero completo, bug = marcador tipo TV, auto = TV si el tablero completo no cabe bien
+const bugMode = (sc) => (sc.layout === 'bug' || (sc.layout === 'auto' && Math.min(sc.w / 1920, sc.h / 1080) < 0.55));
+// tres diseños de referencia (px) que se escalan a la pantalla; se elige por la forma (ancho / alto)
+const BUG_VARIANTS = {
+  banner: { cols: [90, 150, 120, 90, 150, 120, 400], rows: [100],
+    cells: [['lg', 'h', 'logo', 70], ['tm nm', 'h', 'name', 42], ['dark sc', 'h', 'score', 66], ['lg', 'a', 'logo', 70], ['tm nm', 'a', 'name', 42], ['dark sc', 'a', 'score', 66], ['dark ctr row', '', 'center', 0]] },
+  wide: { cols: [200, 210, 220, 340, 220, 210, 200], rows: [300],
+    cells: [['lg', 'h', 'logo', 140], ['tm nm', 'h', 'name', 54], ['dark sc', 'h', 'score', 190], ['dark ctr', '', 'center', 0], ['dark sc', 'a', 'score', 190], ['tm nm', 'a', 'name', 54], ['lg', 'a', 'logo', 140]] },
+  box: { cols: [180, 500, 320], rows: [200, 200, 200],
+    cells: [['lg', 'h', 'logo', 130], ['tm nm', 'h', 'name', 64], ['dark sc', 'h', 'score', 170],
+      ['lg', 'a', 'logo', 130], ['tm nm', 'a', 'name', 64], ['dark sc', 'a', 'score', 170], ['dark ctr row', '', 'center', 0]] },
+  tall: { cols: [400], rows: [170, 90, 190, 170, 90, 190, 300],
+    cells: [['lg', 'h', 'logo', 120], ['tm nm', 'h', 'name', 50], ['dark sc', 'h', 'score', 170],
+      ['lg', 'a', 'logo', 120], ['tm nm', 'a', 'name', 50], ['dark sc', 'a', 'score', 170], ['dark ctr', '', 'center', 0]] },
+};
+let bugKey = '';
+// contorno rojo de la bocina alrededor del marcador: grosor ~5% de su lado más corto (2 a 10 px), no los 16 px del tablero
+function frameAround(x, y, w, h, radius = 0) {
+  // delgado: ~2.5% del lado más corto (1 a 6 px), con un brillo suave que no tapa los datos
+  const t = Math.max(1, Math.min(6, Math.round(Math.min(w, h) * 0.025)));
+  Object.assign($('frame').style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', right: 'auto', bottom: 'auto',
+    borderWidth: t + 'px', borderRadius: radius + 'px', boxShadow: `inset 0 0 ${t * 2}px rgba(255,20,20,.45)` });
+}
+// formas de la fila del tablero según el área: franja (tal cual), caja (equipos arriba, reloj abajo) o póster (todo apilado)
+const TOP_VARIANTS = {
+  box: { cols: [300, 330, 330, 300], rows: [243, 230], areas: '"lh sh sa la" "m m m m"' },
+  tall: { cols: [420], rows: [210, 270, 290, 270, 210], areas: '"lh" "sh" "m" "sa" "la"' },
+};
+function topVariant(sc) { const r = (sc.w * sc.bugW) / (sc.h * sc.bugH); return r >= 4.5 ? 'wide' : r >= 1.3 ? 'box' : 'tall'; }
+function bugVariant(sc) { const r = sc.w / sc.h; return r >= 5 ? 'banner' : r >= 2.2 ? 'wide' : r >= 0.8 ? 'box' : 'tall'; }
+let bugRatio = 1;   // forma del área del marcador (para elegir siglas o nombre completo)
+function buildBug(sc) {
+  // área que ocupa el marcador: Ancho % y Alto % de la pantalla, en la posición elegida
+  const bw = Math.round(sc.w * (sc.bugW || 100) / 100), bh = Math.round(sc.h * (sc.bugH || 35) / 100), pos = sc.bugPos || 'tc';
+  let bx = pos[1] === 'l' ? 0 : pos[1] === 'r' ? sc.w - bw : Math.round((sc.w - bw) / 2);
+  let by = pos[0] === 't' ? 0 : pos[0] === 'b' ? sc.h - bh : Math.round((sc.h - bh) / 2);
+  if (pos === 'free') {                    // posición libre: X % / Y %, sin salirse de la pantalla
+    bx = Math.round(Math.min(sc.w - bw, Math.max(0, sc.w * (sc.bugX || 0) / 100)));
+    by = Math.round(Math.min(sc.h - bh, Math.max(0, sc.h * (sc.bugY || 0) / 100)));
+  }
+  const box = { w: bw, h: bh }; bugRatio = bw / bh;
+  if (sc.bugStyle !== 'tv' && topVariant(sc) !== 'wide') {   // caja / póster: mismas piezas reacomodadas, llenan el área
+    const top = document.querySelector('#stage>.top'), V = TOP_VARIANTS[topVariant(sc)];
+    const sum = (a) => a.reduce((x, y) => x + y, 0);
+    let cols = V.cols, rows = V.rows; const W0 = sum(cols), H0 = sum(rows), want = bw / bh;
+    if (want > W0 / H0) cols = cols.map((c) => c * (H0 * want) / W0); else rows = rows.map((r) => r * (W0 / want) / H0);
+    const VW = sum(cols), VH = sum(rows), k = bw / VW;
+    top.classList.add('alt');
+    Object.assign(top.style, { left: bx + 'px', top: by + 'px', width: VW + 'px', height: VH + 'px', transform: `scale(${k})`,
+      gridTemplateColumns: cols.map((c) => c + 'px').join(' '), gridTemplateRows: rows.map((r) => r + 'px').join(' '), gridTemplateAreas: V.areas });
+    frameAround(bx, by, bw, bh, 16 * k);
+    return;
+  }
+  if (sc.bugStyle !== 'tv') {              // franja: la fila de arriba tal cual (con tu plantilla), escalada sin deformarse
+    const top = document.querySelector('#stage>.top'), k = Math.min(bw / 1870, bh / 243);
+    top.classList.remove('alt');
+    for (const p of ['width', 'height', 'gridTemplateColumns', 'gridTemplateRows', 'gridTemplateAreas']) top.style[p] = '';
+    const x0 = bx + (bw - 1870 * k) / 2, y0 = by + (bh - 243 * k) / 2;
+    Object.assign(top.style, { left: x0 + 'px', top: y0 + 'px', transform: `scale(${k})` });
+    frameAround(x0, y0, 1870 * k, 243 * k, 12 * k);
+    return;
+  }
+  const name = bugVariant(box), V = BUG_VARIANTS[name], key = name + bw + 'x' + bh;
+  const el = $('bugin');
+  // estirar columnas (o filas) para que el diseño tenga la misma forma que la pantalla y la llene entera; la letra no se deforma
+  const sum = (a) => a.reduce((x, y) => x + y, 0);
+  let cols = V.cols, rows = V.rows; const W0 = sum(cols), H0 = sum(rows), want = box.w / box.h;
+  if (want > W0 / H0) cols = cols.map((c) => c * (H0 * want) / W0); else rows = rows.map((r) => r * (W0 / want) / H0);
+  const VW = sum(cols), VH = sum(rows);
+  if (key !== bugKey) {
+    bugKey = key;
+    const centerRow = name === 'box';      // en la caja, periodo / reloj / 24 van en una fila que ocupa todo el ancho
+    const inRow = name === 'box' || name === 'banner';
+    el.style.cssText = `grid-template-columns:${cols.map((c) => c + 'px').join(' ')};grid-template-rows:${rows.map((r) => r + 'px').join(' ')};width:${VW}px;height:${VH}px`;
+    el.innerHTML = V.cells.map(([cls, t, kind, fsz]) => {
+      if (kind === 'center') {
+        const span = centerRow ? 'grid-column:1/-1;' : '';
+        const dir = inRow ? `flex-direction:row;gap:${name === 'banner' ? 26 : 60}px` : 'flex-direction:column;gap:10px';
+        const big = { banner: 66, wide: 116, box: 150, tall: 130 }[name], sm = { banner: 36, wide: 46, box: 70, tall: 54 }[name];
+        return `<div class="b ${cls}" style="${span}${dir}">
+          <div class="per" id="b-per" style="font-size:${sm}px"></div>
+          <div class="clk" id="b-clk" style="font-size:${big}px"></div>
+          <div class="sh" id="b-sh" style="font-size:${sm + 8}px"></div></div>`;
+      }
+      if (kind === 'logo') return `<div class="b ${cls}" id="b-${t}-logo" style="font-size:${fsz}px"></div>`;
+      if (kind === 'name') return `<div class="b ${cls}" style="font-size:${fsz}px"><div class="n"><span class="poss" id="b-${t}-poss">${t === 'h' ? '◀' : '▶'}</span> <span id="b-${t}-name"></span></div>
+          <div class="info"><span id="b-${t}-f"></span><span class="bon" id="b-${t}-bon"></span><span id="b-${t}-to"></span></div></div>`;
+      return `<div class="b ${cls}" id="b-${t}-score" style="font-size:${fsz}px"></div>`;
+    }).join('');
+  }
+  // escalar para llenar la pantalla, centrado
+  const k = box.w / VW;
+  el.style.transform = `scale(${k})`;
+  el.style.left = bx + 'px'; el.style.top = by + 'px';
+  // el contorno rojo de la bocina va solo alrededor del marcador
+  frameAround(bx, by, bw, bh);
+}
+function renderBug() {
+  if (!S || !document.documentElement.classList.contains('bugmode')) return;
+  buildBug(SCR);
+  if (SCR.bugStyle !== 'tv') return;
+  const set = S.settings;
+  for (const [t, k] of [['h', 'home'], ['a', 'away']]) {
+    const T = S.teams[k];
+    $(`b-${t}-logo`).innerHTML = T.logo ? `<img src="${esc(T.logo)}" alt="">` : `<span class="ph">${esc(T.short || T.name.slice(0, 3))}</span>`;
+    $(`b-${t}-name`).textContent = T.short && bugRatio >= 2.2 ? T.short : T.name;
+    $(`b-${t}-score`).textContent = two(T.score);
+    $(`b-${t}-f`).textContent = 'F ' + T.fouls;
+    $(`b-${t}-bon`).textContent = T.fouls >= (set.foulBonus || 4) ? 'BONUS' : '';
+    $(`b-${t}-to`).textContent = 'TF ' + T.timeouts;
+    $(`b-${t}-poss`).classList.toggle('on', S.possession === k);
+  }
+  $('b-per').textContent = $('period').textContent;
+  $('b-per').classList.toggle('final', !!S.final);
+}
+// el reloj del marcador tipo TV copia al del tablero (que calcula tick)
+function tickBug() {
+  if (!document.documentElement.classList.contains('bugmode') || !$('b-clk')) return;
+  const g = $('gclock'), sh = $('sclock');
+  $('b-clk').textContent = g.textContent; $('b-clk').className = 'clk ' + g.className;
+  $('b-sh').textContent = sh.textContent; $('b-sh').className = 'sh ' + sh.className;
+  $('b-per').textContent = $('period').textContent;
+}
+
+// ---- escalado a la ventana (el lienzo tiene el tamaño de la pantalla elegida) ----
+function fit() { $('stage').style.transform = `scale(${Math.min(innerWidth / SCR.w, innerHeight / SCR.h)})`; }
 addEventListener('resize', fit); fit();
 
 // ---- tabla de jugadores ----
@@ -241,18 +435,19 @@ function qsHTML(k) {
 
 // ---- nombres completos: la letra se achica hasta que el nombre cabe; si no cabe en una línea, pasa a dos ----
 function fitNames() {
+  const k = (SCR.fs || 100) / 100, f = (n) => (n * k).toFixed(1) + 'px';   // tamaños según la escala de la pantalla
   for (const el of document.querySelectorAll('td.nm .nmt')) {
     el.classList.remove('wrap');
-    let size = 28; el.style.fontSize = size + 'px';
-    while (el.scrollWidth > el.clientWidth && size > 18) el.style.fontSize = --size + 'px';
+    let size = 28; el.style.fontSize = f(size);
+    while (el.scrollWidth > el.clientWidth && size > 18) el.style.fontSize = f(--size);
     if (el.scrollWidth <= el.clientWidth) continue;
-    el.classList.add('wrap');                      // dos líneas dentro de la fila de 62 px
-    size = 24; el.style.fontSize = size + 'px';
-    while ((el.scrollHeight > 56 || el.scrollWidth > el.clientWidth) && size > 14) el.style.fontSize = --size + 'px';
+    el.classList.add('wrap');                      // dos líneas dentro de la fila
+    size = 24; el.style.fontSize = f(size);
+    while ((el.scrollHeight > 56 * k || el.scrollWidth > el.clientWidth) && size > 14) el.style.fontSize = f(--size);
   }
   for (const h of document.querySelectorAll('.panel h2')) {   // nombre del equipo en la cabecera del panel
-    let size = 56; h.style.fontSize = size + 'px';
-    while (h.scrollWidth > h.clientWidth && size > 28) h.style.fontSize = --size + 'px';
+    let size = 56; h.style.fontSize = f(size);
+    while (h.scrollWidth > h.clientWidth && size > 28) h.style.fontSize = f(--size);
   }
 }
 
@@ -267,10 +462,17 @@ function render() {
   R.classList.toggle('transparent', cmode === 'transparent');
   document.body.classList.toggle('transparent', cmode === 'transparent');
   document.body.classList.toggle('cg', cmode === 'green');
-  const bg = set.bgImage || '';
+  applyScreen(screenOf(set));
+  const bg = bugMode(SCR) ? '' : (SCR.bg || set.bgImage || '');   // fondo propio o el general; en el marcador tipo TV, ninguno (transparente)
   $('stage').style.backgroundImage = bg ? `url("${bg.replace(/"/g, '%22')}")` : '';
   $('stage').classList.toggle('hasbg', !!bg);
-  R.classList.toggle('bgonly', !!bg && !!set.bgOnly);
+  const tplMode = !!set.bgImage && !!set.bgOnly, topOn = bugMode(SCR) && SCR.bugStyle !== 'tv', wideTop = topOn && topVariant(SCR) === 'wide';
+  const topBg = wideTop && set.bgImage ? set.bgImage : '';
+  document.querySelector('#stage>.top').classList.toggle('tpl', topOn && tplMode);
+  R.classList.toggle('bgonly', (!!bg || !!topBg) && !!set.bgOnly && (!topOn || wideTop));
+  const topEl = document.querySelector('#stage>.top');
+  if (topBg) topEl.style.setProperty('--topbg', `url("${topBg.replace(/"/g, '%22')}")`);
+  else topEl.style.removeProperty('--topbg');
   R.classList.toggle('vclear', !!set.viewClear);
   for (const [k, v] of [['viewBg', '--vbg'], ['viewHead', '--vhead'], ['viewTeams', '--vteams'], ['viewLine', '--vline'], ['viewLabel', '--vlabel'], ['viewLead', '--vlead'], ['viewText', '--vtext']])
     if (set[k]) R.style.setProperty(v, set[k]); else R.style.removeProperty(v);
@@ -287,6 +489,7 @@ function render() {
   $('period').classList.toggle('final', !!S.final);
   const v = set.centerView;
   $('media').innerHTML = LAYER === 'base' ? '' : v === 'leaders' ? leadersView() : v === 'compare' ? compareView() : '';
+  renderBug(); tickBug();
 }
 
 // ---- relojes: el servidor manda el valor, aquí se interpola para que sea fluido ----
@@ -316,6 +519,7 @@ function tick() {
     $('sclock').textContent = show ? (s < 5000 && s > 0 ? (Math.floor(s / 100) / 10).toFixed(1) : Math.ceil(s / 1000)) : '';
     $('sclock').classList.toggle('low', s <= 5000);
   }
+  tickBug();
   requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);

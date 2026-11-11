@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scoreboard - Entrar</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0d1117;color:#e6edf3;font:15px/1.4 "Segoe UI",Arial,sans-serif;padding:16px}
+  .box{width:100%;max-width:360px;background:#161b22;border:1px solid #30363d;border-radius:10px;padding:24px}
+  h1{margin:0 0 4px;font-size:20px}
+  p.sub{margin:0 0 18px;color:#8b949e;font-size:13px}
+  label{display:block;margin:12px 0 4px;color:#8b949e;font-size:12px}
+  input{width:100%;background:#0d1117;color:#e6edf3;border:1px solid #444c56;border-radius:6px;padding:10px;font:inherit}
+  input:focus{outline:2px solid #1f6feb;border-color:#1f6feb}
+  button{width:100%;margin-top:18px;background:#238636;color:#fff;border:1px solid #2ea043;border-radius:6px;padding:11px;font:inherit;font-weight:700;cursor:pointer}
+  button:hover{background:#2ea043}
+  .msg{margin-top:12px;min-height:20px;font-size:13px;color:#ff7b72}
+  .msg.ok{color:#3fb950}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="box">
+  <form id="login">
+    <h1>Scoreboard</h1>
+    <p class="sub">Entra con tu usuario para usar el panel.</p>
+    <label for="u">Usuario</label><input id="u" autocomplete="username" autocapitalize="none" required>
+    <label for="p">Contraseña</label><input id="p" type="password" autocomplete="current-password" required>
+    <button>Entrar</button>
+  </form>
+
+  <form id="change" hidden>
+    <h1>Cambia tu contraseña</h1>
+    <p class="sub" id="csub">Por seguridad, cambia la contraseña temporal antes de seguir.</p>
+    <label for="o">Contraseña actual</label><input id="o" type="password" autocomplete="current-password" required>
+    <label for="n1">Nueva contraseña (mínimo 6)</label><input id="n1" type="password" autocomplete="new-password" minlength="6" required>
+    <label for="n2">Repite la nueva contraseña</label><input id="n2" type="password" autocomplete="new-password" minlength="6" required>
+    <button>Guardar y entrar</button>
+  </form>
+  <div class="msg" id="msg"></div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const qs = new URLSearchParams(location.search);
+// solo rutas internas (evita redirigir a otro sitio)
+const next = /^\/[^/\\]/.test(qs.get('next') || '') ? qs.get('next') : '/control.html';
+const msg = (t, ok) => { $('#msg').textContent = t; $('#msg').classList.toggle('ok', !!ok); };
+const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  .then(async (r) => ({ ok: r.ok, ...(await r.json().catch(() => ({}))) }));
+
+function showChange(oldPw) {
+  $('#login').hidden = true; $('#change').hidden = false;
+  if (oldPw) { $('#o').value = oldPw; $('#n1').focus(); } else $('#o').focus();
+}
+
+$('#login').onsubmit = async (e) => {
+  e.preventDefault(); msg('');
+  const r = await post('/api/login', { username: $('#u').value, password: $('#p').value });
+  if (!r.ok) return msg(r.error || 'No se pudo entrar');
+  if (r.user.mustChange) return showChange($('#p').value);
+  location.href = next;
+};
+
+$('#change').onsubmit = async (e) => {
+  e.preventDefault(); msg('');
+  if ($('#n1').value !== $('#n2').value) return msg('Las contraseñas nuevas no coinciden');
+  if ($('#n1').value === $('#o').value) return msg('La nueva contraseña debe ser distinta');
+  const r = await post('/api/password', { old: $('#o').value, new: $('#n1').value });
+  if (!r.ok) return msg(r.error || 'No se pudo cambiar');
+  msg('Contraseña cambiada', true);
+  setTimeout(() => { location.href = next; }, 600);
+};
+
+// ?change=1 → ya hay sesión pero debe cambiar la contraseña (o la quiere cambiar desde el panel)
+if (qs.get('change')) {
+  fetch('/api/me').then((r) => r.json()).then((r) => {
+    if (!r.ok) return;
+    if (!r.user.mustChange) $('#csub').textContent = 'Escribe tu contraseña actual y la nueva.';
+    showChange('');
+  });
+} else $('#u').focus();
+</script>
+</body>
+</html>

@@ -8,9 +8,37 @@ const os = require('os');
 const crypto = require('crypto');
 const store = require('./db').open();
 const { buildReport } = require('./pdf');
+const auth = require('./auth');
 
 const PORT = process.env.PORT || 8080;
 const PUBLIC = path.join(__dirname, 'public');
+
+// ---------- Usuarios: primer arranque = admin / admin (pide cambiarla al entrar) ----------
+if (store.countUsers() === 0) {
+  store.createUser({ username: 'admin', name: 'Administrador', pass: auth.hashPassword('admin'), roles: ['admin'], mustChange: true });
+  console.log('\n  Usuario inicial creado -> usuario: admin  contraseña: admin  (cámbiala al entrar)\n');
+}
+setInterval(() => store.purge(), 3600e3).unref();
+// clave para Stream Deck / Companion (/api/cmd?key=...): se ve y se cambia en Admin
+if (!store.getKV('apiKey')) store.setKV('apiKey', auth.newToken().slice(0, 24));
+
+function userFromToken(token) {
+  const ses = token && store.getSession(token);
+  const u = ses && store.getUser(ses.userId);
+  return u && u.active ? u : null;
+}
+const userFromReq = (req) => userFromToken(auth.readCookie(req));
+function readBody(req, cb, limit = 1e6) {
+  let body = '', dead = false;
+  req.on('data', (d) => { body += d; if (body.length > limit) { dead = true; req.destroy(); } });
+  req.on('end', () => { if (dead) return; let o = {}; try { o = JSON.parse(body || '{}'); } catch (_) {} cb(o); });
+}
+// registro de actividad: quién hizo qué (los comandos del reloj también, para saber quién lo paró)
+function auditCmd(user, c) {
+  const { a, t, ...rest } = c;
+  const detail = Object.keys(rest).length ? JSON.stringify(rest) : '';
+  store.audit(user ? user.username : 'stream-deck', a || '?', detail);
+}
 
 // ---------- Estado ----------
 const player = (n = '', name = '', on = false, pos = '') => ({ n, name, pos, pts: 0, reb: 0, ast: 0, pf: 0, on });
@@ -23,6 +51,42 @@ const team = (name, short, names) => ({
   stats: { p2m: 0, p2a: 0, p3m: 0, p3a: 0, ftm: 0, fta: 0, stl: 0, tov: 0, blk: 0 },
 });
 const emptyTimer = () => ({ kind: '', label: '', team: null, ms: 0, total: 0, running: false, done: false });
+
+// ---------- Pantallas: mismo diseño, cada una con su tamaño y proporciones ----------
+// Medidas base (pantalla Principal 1920x1080, coinciden con la plantilla led_scoreboard_layout_vacio.png)
+const BASE_SCREEN = { w: 1920, h: 1080, fs: 100, padT: 18, padB: 20, padX: 25, titleH: 52, topH: 243, gapY: 17, gapX: 18,
+  scoreW: 275, clockW: 450, sideW: 482, statsH: 193, stripH: 137 };
+const SCREEN_LIMITS = { w: [64, 7680], h: [64, 4320], fs: [5, 400], padT: [0, 400], padB: [0, 400], padX: [0, 600], titleH: [0, 400],
+  topH: [10, 1600], gapY: [0, 200], gapX: [0, 200], scoreW: [10, 2400], clockW: [10, 3000], sideW: [10, 3000], statsH: [0, 2000], stripH: [0, 2000] };
+// proporciones escaladas al tamaño (para pantallas nuevas o con "Ajustar al tamaño")
+function scaledScreen(w, h) {
+  const kx = w / 1920, ky = h / 1080, k = Math.min(kx, ky), r = Math.round, b = BASE_SCREEN;
+  return { w, h, fs: r(100 * k), padT: r(b.padT * ky), padB: r(b.padB * ky), padX: r(b.padX * kx), titleH: r(b.titleH * ky), topH: r(b.topH * ky),
+    gapY: r(b.gapY * ky), gapX: r(b.gapX * kx), scoreW: r(b.scoreW * kx), clockW: r(b.clockW * kx), sideW: r(b.sideW * kx),
+    statsH: r(b.statsH * ky), stripH: r(b.stripH * ky) };
+}
+function cleanScreen(x) {
+  const out = { id: String(x.id || 'p' + Date.now().toString(36)).replace(/[^\w-]/g, '').slice(0, 24) || 'p', name: String(x.name || 'Pantalla').slice(0, 40), bg: typeof x.bg === 'string' ? x.bg : '',
+    layout: ['auto', 'full', 'bug'].includes(x.layout) ? x.layout : 'auto',   // auto = marcador tipo TV si el tablero no cabe
+    // marcador tipo TV: ocupa solo una parte (el resto queda transparente para anuncios)
+    bugPos: ['tl', 'tc', 'tr', 'ml', 'mc', 'mr', 'bl', 'bc', 'br', 'free'].includes(x.bugPos) ? x.bugPos : 'bc',
+    // posición libre (arrastrando en el panel): esquina superior izquierda del marcador, en % de la pantalla
+    bugX: Math.round(Math.max(0, Math.min(100, Number(x.bugX) || 0)) * 10) / 10, bugY: Math.round(Math.max(0, Math.min(100, Number(x.bugY) || 0)) * 10) / 10,
+    bugW: Math.round(Math.max(3, Math.min(100, Number(x.bugW) || 50)) * 10) / 10, bugH: Math.round(Math.max(3, Math.min(100, Number(x.bugH) || 8)) * 10) / 10,
+    // estilo del marcador tipo TV: top = la fila de arriba del tablero (mismo diseño), tv = banner compacto
+    bugStyle: x.bugStyle === 'tv' ? 'tv' : 'top' };
+  for (const [k, [lo, hi]] of Object.entries(SCREEN_LIMITS)) out[k] = Math.round(Math.max(lo, Math.min(hi, Number(x[k] ?? BASE_SCREEN[k]) || BASE_SCREEN[k])));
+  // X / Y nunca pasan del máximo real (el marcador no puede salirse): así al restar se mueve de inmediato
+  out.bugX = Math.min(out.bugX, Math.round((100 - out.bugW) * 10) / 10);
+  out.bugY = Math.min(out.bugY, Math.round((100 - out.bugH) * 10) / 10);
+  if (out.bugPos !== 'free') {
+    const p = out.bugPos, r1 = (v) => Math.round(v * 10) / 10;
+    out.bugX = r1(p[1] === 'l' ? 0 : p[1] === 'r' ? 100 - out.bugW : (100 - out.bugW) / 2);
+    out.bugY = r1(p[0] === 't' ? 0 : p[0] === 'b' ? 100 - out.bugH : (100 - out.bugH) / 2);
+  }
+  return out;
+}
+const mainScreen = () => ({ id: 'principal', name: 'Principal', bg: '', layout: 'full', ...BASE_SCREEN });
 
 function defaults() {
   return {
@@ -56,6 +120,7 @@ function defaults() {
       viewLead: '#ffd400',  // el valor que va ganando
       viewText: '#ffffff',  // resto del texto
       viewClear: false,     // true = sin fondos (se ve la imagen de fondo / plantilla)
+      screens: [mainScreen()],   // pantallas: display.html?p=<id>  (Principal = display.html)
       center: 'black',      // black | transparent | green
       bottom: 'stats',      // cuadro inferior de cada equipo: stats | note
       centerView: 'none',   // none | leaders | compare
@@ -79,6 +144,9 @@ function migrate(saved) {
   const d = defaults();
   const s = { ...d, ...saved };
   s.settings = { ...d.settings, ...saved.settings };
+  s.settings.screens = (Array.isArray(s.settings.screens) && s.settings.screens.length ? s.settings.screens : [mainScreen()]).map(cleanScreen);
+  if (!s.settings.screens.some((x) => x.id === 'principal')) s.settings.screens.unshift(mainScreen());
+  for (const x of s.settings.screens) if (x.id === 'principal' && !(saved.settings?.screens || []).find((y) => y.id === 'principal')?.layout) x.layout = 'full';
   for (const k of ['home', 'away']) {
     s.teams[k] = { ...d.teams[k], ...(saved.teams || {})[k] };
     s.teams[k].stats = { ...d.teams[k].stats, ...((saved.teams || {})[k] || {}).stats };
@@ -197,7 +265,34 @@ function fillRoster(t, list) {
 
 function run(c) {
   switch (c.a) {
-    case 'set': { const r = getParent(String(c.path)); if (!r) return false; r[0][r[1]] = c.value; break; }
+    case 'set': {
+      const r = getParent(String(c.path)); if (!r) return false; r[0][r[1]] = c.value;
+      const m = String(c.path).match(/^settings\.screens\.(\d+)\./);                       // medidas de pantalla: siempre dentro de rango
+      if (m && S.settings.screens[m[1]]) S.settings.screens[m[1]] = cleanScreen(S.settings.screens[m[1]]);
+      break;
+    }
+    // ---- pantallas ----
+    case 'screenAdd': {
+      if (S.settings.screens.length >= 12) return false;
+      const w = num(c.w) || 1920, h = num(c.h) || 1080;
+      // marcador tipo TV por defecto: banner delgado abajo (pantallas anchas) o franja arriba (pósters verticales)
+      const bug = w / h >= 1.3 ? { bugPos: 'bc', bugW: 50, bugH: 10 } : { bugPos: 'tc', bugW: 100, bugH: 60 };   // estilo: fila del tablero
+      S.settings.screens.push(cleanScreen({ id: 'p' + Date.now().toString(36), name: String(c.name || 'Pantalla ' + (S.settings.screens.length + 1)), ...scaledScreen(w, h), ...bug }));
+      break;
+    }
+    case 'screenDel': {
+      if (c.id === 'principal') return false;
+      const n = S.settings.screens.length;
+      S.settings.screens = S.settings.screens.filter((x) => x.id !== c.id);
+      if (S.settings.screens.length === n) return false;
+      break;
+    }
+    case 'screenFit': {                       // recalcula las proporciones a partir del ancho y alto
+      const i = S.settings.screens.findIndex((x) => x.id === c.id); if (i < 0) return false;
+      const x = S.settings.screens[i];
+      S.settings.screens[i] = cleanScreen({ ...x, ...(x.id === 'principal' && x.w === 1920 && x.h === 1080 ? BASE_SCREEN : scaledScreen(x.w, x.h)) });
+      break;
+    }
     case 'inc': {
       const r = getParent(String(c.path));
       if (!r || typeof r[0][r[1]] !== 'number') return false;
@@ -395,7 +490,13 @@ function onData(sock, chunk) {
     if (op === 1) {
       try {
         const msg = JSON.parse(payload.toString('utf8'));
-        if (msg.t === 'cmd' && apply(msg)) broadcastState();
+        if (msg.t === 'cmd') {
+          const user = userFromToken(sock.token);      // se revisa en cada comando: si desactivan al usuario, deja de poder
+          if (!user) send(sock, { t: 'err', msg: 'Tu sesión terminó. Vuelve a entrar.', login: true });
+          else if (user.mustChange) send(sock, { t: 'err', msg: 'Primero cambia tu contraseña.' });
+          else if (!auth.canRun(user, msg)) send(sock, { t: 'err', msg: 'No tienes permiso para esa acción (' + auth.rolesFor(msg).map((r) => auth.ROLES[r]).join(' / ') + ').' });
+          else if (apply(msg)) { auditCmd(user, msg); broadcastState(); }
+        }
       } catch (_) {}
     }
   }
@@ -412,16 +513,114 @@ const json = (res, obj, code = 200) => {
   res.end(JSON.stringify(obj));
 };
 
+const PROTECTED_PAGES = ['/control.html', '/admin.html'];   // piden usuario; display.html y popup.html quedan abiertas para OBS
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
+  let me = userFromReq(req);
+  const deny = (code = 401, error = 'Inicia sesión') => json(res, { ok: false, error }, code);
+
+  // ---------- login / sesión ----------
+  if (url.pathname === '/api/login' && req.method === 'POST') {
+    return readBody(req, (b) => {
+      const u = store.getUserByName(String(b.username || '').trim());
+      if (!u || !u.active || !auth.checkPassword(b.password, u.pass)) {
+        store.audit(String(b.username || '').slice(0, 40), 'loginFallido', '');
+        return setTimeout(() => deny(401, 'Usuario o contraseña incorrectos'), 400);
+      }
+      const token = auth.newToken();
+      store.createSession(token, u.id, Date.now() + auth.SESSION_DAYS * 864e5);
+      store.touchLogin(u.id); store.audit(u.username, 'login', '');
+      res.setHeader('Set-Cookie', auth.sessionCookie(token, auth.SESSION_DAYS * 86400));
+      json(res, { ok: true, user: auth.publicUser(u) });
+    });
+  }
+  if (url.pathname === '/api/logout' && req.method === 'POST') {
+    const tk = auth.readCookie(req); if (tk) store.deleteSession(tk);
+    res.setHeader('Set-Cookie', auth.sessionCookie('', 0));
+    return json(res, { ok: true });
+  }
+  if (url.pathname === '/api/me') return me ? json(res, { ok: true, user: auth.publicUser(me), roles: auth.ROLES }) : deny();
+  if (url.pathname === '/api/password' && req.method === 'POST') {
+    if (!me) return deny();
+    return readBody(req, (b) => {
+      if (!auth.checkPassword(b.old, me.pass)) return deny(400, 'La contraseña actual no es correcta');
+      if (String(b.new || '').length < 6) return deny(400, 'La nueva contraseña debe tener al menos 6 caracteres');
+      store.setPassword(me.id, auth.hashPassword(b.new), false); store.audit(me.username, 'cambioContraseña', '');
+      json(res, { ok: true });
+    });
+  }
+
+  // ---------- usuarios (solo admin) ----------
+  if (url.pathname.startsWith('/api/users') || url.pathname === '/api/audit' || url.pathname === '/api/apikey') {
+    if (!me) return deny();
+    if (!auth.hasRole(me, 'admin') || me.mustChange) return deny(403, 'Solo un administrador');
+    if (url.pathname === '/api/audit') return json(res, store.listAudit(Math.min(1000, num(url.searchParams.get('limit')) || 300)));
+    if (url.pathname === '/api/apikey') {
+      if (req.method === 'POST') { store.setKV('apiKey', auth.newToken().slice(0, 24)); store.audit(me.username, 'nuevaClaveStreamDeck', ''); }
+      return json(res, { key: store.getKV('apiKey') });
+    }
+    if (req.method === 'GET') return json(res, { users: store.listUsers().map(auth.publicUser), roles: auth.ROLES });
+    const id = num(url.pathname.split('/')[3]);
+    const admins = () => store.listUsers().filter((u) => u.active && u.roles.includes('admin'));
+    return readBody(req, (b) => {
+      if (req.method === 'POST' && !id) {                                     // crear
+        const username = String(b.username || '').trim().toLowerCase();
+        if (!/^[a-z0-9._-]{3,30}$/.test(username)) return deny(400, 'Usuario: 3 a 30 letras, números, punto, guion');
+        if (store.getUserByName(username)) return deny(400, 'Ese usuario ya existe');
+        if (String(b.password || '').length < 6) return deny(400, 'La contraseña temporal debe tener al menos 6 caracteres');
+        store.createUser({ username, name: String(b.name || '').slice(0, 60), pass: auth.hashPassword(b.password), roles: auth.cleanRoles(b.roles), mustChange: true });
+        store.audit(me.username, 'crearUsuario', username);
+        return json(res, { ok: true });
+      }
+      const u = id && store.getUser(id);
+      if (!u) return deny(404, 'Usuario no encontrado');
+      const lastAdmin = u.roles.includes('admin') && admins().length <= 1 && admins()[0]?.id === u.id;
+      if (req.method === 'DELETE') {
+        if (u.id === me.id) return deny(400, 'No puedes borrar tu propio usuario');
+        if (lastAdmin) return deny(400, 'Debe quedar al menos un administrador activo');
+        store.deleteUser(u.id); store.audit(me.username, 'borrarUsuario', u.username);
+        return json(res, { ok: true });
+      }
+      if (req.method === 'POST' && b.resetPassword) {                         // contraseña temporal nueva
+        if (String(b.resetPassword).length < 6) return deny(400, 'La contraseña temporal debe tener al menos 6 caracteres');
+        store.setPassword(u.id, auth.hashPassword(b.resetPassword), true); store.deleteUserSessions(u.id);
+        store.audit(me.username, 'resetContraseña', u.username);
+        return json(res, { ok: true });
+      }
+      if (req.method === 'POST') {                                            // editar nombre / roles / activo
+        const roles = b.roles ? auth.cleanRoles(b.roles) : u.roles;
+        const active = b.active != null ? !!b.active : u.active;
+        if (lastAdmin && (!roles.includes('admin') || !active)) return deny(400, 'Debe quedar al menos un administrador activo');
+        store.updateUser(u.id, { name: b.name != null ? String(b.name).slice(0, 60) : u.name, roles, active });
+        if (!active) store.deleteUserSessions(u.id);
+        store.audit(me.username, 'editarUsuario', `${u.username} ${roles.join(',')}${active ? '' : ' (desactivado)'}`);
+        return json(res, { ok: true });
+      }
+      deny(405, 'Método no permitido');
+    });
+  }
+
+  // ---------- páginas protegidas ----------
+  if (PROTECTED_PAGES.includes(url.pathname) || url.pathname === '/') {
+    if (!me) { res.writeHead(302, { Location: '/login.html?next=' + encodeURIComponent(url.pathname === '/' ? '/control.html' : url.pathname + url.search) }); return res.end(); }
+    if (me.mustChange) { res.writeHead(302, { Location: '/login.html?change=1' }); return res.end(); }
+    if (url.pathname === '/admin.html' && !auth.hasRole(me, 'admin')) { res.writeHead(302, { Location: '/control.html' }); return res.end(); }
+  }
+  if (me && me.mustChange) me = null;              // con contraseña temporal solo puede cambiarla; nada más
 
   // API para Stream Deck / Companion / Resolume / mesa de control por hardware
-  if (url.pathname === '/api/state') return json(res, S);
-  if (url.pathname === '/api/teams') return json(res, store.listTeams());
-  if (url.pathname === '/api/games') return json(res, store.listGames());
+  if (url.pathname === '/api/state') return json(res, S);                    // solo lectura, abierta
+  if (url.pathname === '/api/teams') return me ? json(res, store.listTeams()) : deny();
+  if (url.pathname === '/api/games') return me ? json(res, store.listGames()) : deny();
   if (url.pathname === '/api/cmd') {
+    // con sesión (rol revisado) o con la clave de Stream Deck: /api/cmd?key=...&a=gameToggle
+    const keyOk = url.searchParams.get('key') && url.searchParams.get('key') === store.getKV('apiKey');
+    if (!me && !keyOk) return deny(401, 'Falta la clave (key) o iniciar sesión');
     const finish = (cmd) => {
-      const ok = apply(cmd); if (ok) broadcastState();
+      delete cmd.key;
+      if (me && !keyOk && !auth.canRun(me, cmd)) return deny(403, 'No tienes permiso para esa acción');
+      const ok = apply(cmd); if (ok) { auditCmd(keyOk ? null : me, cmd); broadcastState(); }
       json(res, { ok }, ok ? 200 : 400);
     };
     if (req.method === 'POST') {
@@ -434,6 +633,8 @@ const server = http.createServer((req, res) => {
 
   // Subir logos / fondo desde el panel: POST /api/upload?kind=logo|bg&ext=png&team=home  (cuerpo = archivo)
   if (url.pathname === '/api/upload' && req.method === 'POST') {
+    const upKind = url.searchParams.get('kind');
+    if (!me || !auth.hasRole(me, upKind === 'logo' ? 'anotacion' : 'pantallas')) return deny(403, 'No tienes permiso para subir ese archivo');
     const dir = { logo: 'logos', bg: 'bg' }[url.searchParams.get('kind')];
     const ext = String(url.searchParams.get('ext') || '').toLowerCase().replace(/[^a-z]/g, '');
     if (!dir || !['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'].includes(ext)) return json(res, { ok: false, error: 'tipo no permitido' }, 400);
@@ -453,6 +654,7 @@ const server = http.createServer((req, res) => {
 
   // Resumen del juego en PDF (juego actual o uno del historial: /report.pdf?game=3)
   if (url.pathname === '/report.pdf') {
+    if (!me) { res.writeHead(302, { Location: '/login.html?next=' + encodeURIComponent(url.pathname + url.search) }); return res.end(); }
     const gid = num(url.searchParams.get('game')) || gameId;
     let st = S, ev = events, date = Date.now();
     if (gid !== gameId) {
@@ -487,6 +689,7 @@ server.on('upgrade', (req, sock) => {
   const accept = crypto.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
   sock.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n');
   sock.setNoDelay(true);
+  sock.token = auth.readCookie(req);                // sin sesión = solo lectura (pantallas de OBS)
   clients.add(sock);
   sock.on('data', (d) => onData(sock, d));
   sock.on('close', () => clients.delete(sock));
@@ -527,7 +730,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`\nScoreboard corriendo (almacenamiento: ${store.kind}). Abre estas direcciones:\n`);
   const ips = Object.values(os.networkInterfaces()).flat().filter((i) => i.family === 'IPv4' && !i.internal).map((i) => i.address);
   for (const ip of ['localhost', ...ips]) {
-    console.log(`  Control (mesa/operador): http://${ip}:${PORT}/control.html`);
+    console.log(`  Control (mesa/operador): http://${ip}:${PORT}/control.html   (Usuarios: /admin.html)`);
     console.log(`  Pantalla (OBS):          http://${ip}:${PORT}/display.html`);
     console.log(`  Rotulos (OBS):           http://${ip}:${PORT}/popup.html\n`);
   }
