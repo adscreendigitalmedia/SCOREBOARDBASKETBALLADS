@@ -149,6 +149,14 @@
   html.bugmode #stage{padding:0}
   html.bugmode,html.bugmode body,html.bugmode #stage{background:transparent!important}   /* el resto queda libre para anuncios */
   html.layer-stats #bug{visibility:hidden}
+  /* diseño TV propio: tu imagen + los datos encima, cada uno en su caja */
+  #bugc{position:absolute;display:none;font-weight:800;line-height:1}
+  html.bugcust #bugin{display:none}html.bugcust #bugc{display:block}
+  #bugc .cimg{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}
+  #bugc .cf{position:absolute;display:flex;align-items:center;overflow:hidden;white-space:nowrap;font-variant-numeric:tabular-nums}
+  #bugc .cf.al{justify-content:flex-start}#bugc .cf.ac{justify-content:center}#bugc .cf.ar{justify-content:flex-end}
+  #bugc .cf img{width:100%;height:100%;object-fit:contain}
+  #bugc .cf.low{color:#ff3b30!important}#bugc .cf.final{color:#ff3b30!important}
   .bugin{position:absolute;left:0;top:0;transform-origin:0 0;display:grid;color:var(--vtext);font-weight:800}
   .bugin .b{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;overflow:hidden;white-space:nowrap;line-height:1}
   .bugin .tm{background:linear-gradient(rgba(255,255,255,.08),rgba(0,0,0,.35)),var(--vhead)}
@@ -189,7 +197,7 @@
     <div class="center"><div class="media" id="media"></div><div class="strip"></div></div>
     <div class="col"><div class="panel" id="apanel"></div><div class="tbox" id="anote"></div></div>
   </div>
-  <div id="bug"><div class="bugin" id="bugin"></div></div>
+  <div id="bug"><div class="bugin" id="bugin"></div><div id="bugc"></div></div>
   <div class="frame" id="frame"></div>
 </div>
 
@@ -221,8 +229,9 @@ function applyScreen(sc) {
   st.setProperty('--fs', sc.fs / 100);
   $('title').style.visibility = sc.titleH > 0 ? '' : 'hidden';
   document.documentElement.classList.toggle('bugmode', bugMode(sc));
-  document.documentElement.classList.toggle('bugtop', bugMode(sc) && sc.bugStyle !== 'tv');
-  if (!(bugMode(sc) && sc.bugStyle !== 'tv')) { const t = document.querySelector('#stage>.top'); t.removeAttribute('style'); t.classList.remove('alt', 'tpl'); }
+  document.documentElement.classList.toggle('bugtop', bugMode(sc) && styleOf(sc) === 'top');
+  document.documentElement.classList.toggle('bugcust', bugMode(sc) && styleOf(sc) === 'custom');
+  if (!(bugMode(sc) && styleOf(sc) === 'top')) { const t = document.querySelector('#stage>.top'); t.removeAttribute('style'); t.classList.remove('alt', 'tpl'); }
   if (!bugMode(sc)) $('frame').removeAttribute('style');
   document.title = 'Scoreboard - ' + (sc.name || 'Pantalla') + ` (${sc.w}×${sc.h})`;
   fit();
@@ -269,7 +278,8 @@ function buildBug(sc) {
     by = Math.round(Math.min(sc.h - bh, Math.max(0, sc.h * (sc.bugY || 0) / 100)));
   }
   const box = { w: bw, h: bh }; bugRatio = bw / bh;
-  if (sc.bugStyle !== 'tv' && topVariant(sc) !== 'wide') {   // caja / póster: mismas piezas reacomodadas, llenan el área
+  if (styleOf(sc) === 'custom') return buildCustom(bx, by, bw, bh);
+  if (styleOf(sc) === 'top' && topVariant(sc) !== 'wide') {   // caja / póster: mismas piezas reacomodadas, llenan el área
     const top = document.querySelector('#stage>.top'), V = TOP_VARIANTS[topVariant(sc)];
     const sum = (a) => a.reduce((x, y) => x + y, 0);
     let cols = V.cols, rows = V.rows; const W0 = sum(cols), H0 = sum(rows), want = bw / bh;
@@ -281,7 +291,7 @@ function buildBug(sc) {
     frameAround(bx, by, bw, bh, 16 * k);
     return;
   }
-  if (sc.bugStyle !== 'tv') {              // franja: la fila de arriba tal cual (con tu plantilla), escalada sin deformarse
+  if (styleOf(sc) === 'top') {              // franja: la fila de arriba tal cual (con tu plantilla), escalada sin deformarse
     const top = document.querySelector('#stage>.top'), k = Math.min(bw / 1870, bh / 243);
     top.classList.remove('alt');
     for (const p of ['width', 'height', 'gridTemplateColumns', 'gridTemplateRows', 'gridTemplateAreas']) top.style[p] = '';
@@ -328,7 +338,8 @@ function buildBug(sc) {
 function renderBug() {
   if (!S || !document.documentElement.classList.contains('bugmode')) return;
   buildBug(SCR);
-  if (SCR.bugStyle !== 'tv') return;
+  if (styleOf(SCR) === 'custom') return renderCustom();
+  if (styleOf(SCR) !== 'tv') return;
   const set = S.settings;
   for (const [t, k] of [['h', 'home'], ['a', 'away']]) {
     const T = S.teams[k];
@@ -343,10 +354,64 @@ function renderBug() {
   $('b-per').textContent = $('period').textContent;
   $('b-per').classList.toggle('final', !!S.final);
 }
+// ---- diseño TV propio (imagen subida desde el panel) ----
+const layoutOf = (sc) => ((S && S.settings.bugLayouts) || []).find((x) => x.id === sc.bugLayout && x.img);
+// estilo efectivo: si el diseño propio no existe (borrado), se usa el banner TV
+const styleOf = (sc) => (sc.bugStyle === 'custom' ? (layoutOf(sc) ? 'custom' : 'tv') : sc.bugStyle || 'top');
+let custKey = '';
+function buildCustom(bx, by, bw, bh) {
+  const L = layoutOf(SCR), el = $('bugc');
+  // la imagen nunca se deforma: se ajusta dentro del área del marcador, centrada
+  let lw = bw, lh = bw / L.ar; if (lh > bh) { lh = bh; lw = bh * L.ar; }
+  const x = Math.round(bx + (bw - lw) / 2), y = Math.round(by + (bh - lh) / 2);
+  Object.assign(el.style, { left: x + 'px', top: y + 'px', width: lw + 'px', height: lh + 'px', fontFamily: L.font || '' });
+  const key = JSON.stringify(L) + lw + 'x' + lh;
+  if (key !== custKey) {
+    custKey = key;
+    el.innerHTML = `<img class="cimg" src="${esc(L.img)}" alt="">` + Object.entries(L.fields).filter(([, f]) => f.on).map(([k, f]) =>
+      `<div class="cf a${f.align}" id="c-${k}" data-al="${f.align}" data-fs="${(lh * f.h / 100 * f.size / 100).toFixed(1)}"
+        style="left:${f.x}%;top:${f.y}%;width:${f.w}%;height:${f.h}%;color:${f.color};font-size:${(lh * f.h / 100 * f.size / 100).toFixed(1)}px"></div>`).join('');
+  }
+  frameAround(x, y, lw, lh);
+}
+// pone el texto de un dato y lo achica si no cabe en su caja
+function setC(k, txt, cls = '') {
+  const e = $('c-' + k); if (!e) return;
+  const c = `cf a${e.dataset.al} ${cls}`; if (e.className !== c) e.className = c;
+  if (e.dataset.t === txt) return;
+  e.dataset.t = txt; e.textContent = txt;
+  let f = +e.dataset.fs; e.style.fontSize = f + 'px';
+  while (f > 4 && (e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1)) { f *= 0.92; e.style.fontSize = f + 'px'; }
+}
+function renderCustom() {
+  const L = layoutOf(SCR), set = S.settings;
+  for (const [t, k] of [['h', 'home'], ['a', 'away']]) {
+    const T = S.teams[k], lg = $(`c-${t}Logo`);
+    if (lg && lg.dataset.t !== (T.logo || T.short)) {
+      lg.dataset.t = T.logo || T.short;
+      lg.innerHTML = T.logo ? `<img src="${esc(T.logo)}" alt="">` : esc(T.short || T.name.slice(0, 3));
+      if (!T.logo) lg.style.fontSize = lg.dataset.fs * 0.6 + 'px';
+    }
+    const F = L.fields;
+    setC(t + 'Name', F[t + 'Name'].short && T.short ? T.short : T.name);
+    setC(t + 'Score', two(T.score));
+    setC(t + 'Fouls', F[t + 'Fouls'].pre + T.fouls);
+    setC(t + 'TO', F[t + 'TO'].pre + T.timeouts);
+    setC(t + 'Bonus', T.fouls >= (set.foulBonus || 4) ? F[t + 'Bonus'].pre : '');
+    setC(t + 'Poss', S.possession === k ? F[t + 'Poss'].pre : '');
+  }
+  tickBug();
+}
 // el reloj del marcador tipo TV copia al del tablero (que calcula tick)
 function tickBug() {
-  if (!document.documentElement.classList.contains('bugmode') || !$('b-clk')) return;
+  if (!document.documentElement.classList.contains('bugmode')) return;
   const g = $('gclock'), sh = $('sclock');
+  if (styleOf(SCR) === 'custom') {
+    setC('clock', g.textContent, g.className); setC('shot', sh.textContent, sh.className);
+    setC('period', $('period').textContent, S && S.final ? 'final' : '');
+    return;
+  }
+  if (!$('b-clk')) return;
   $('b-clk').textContent = g.textContent; $('b-clk').className = 'clk ' + g.className;
   $('b-sh').textContent = sh.textContent; $('b-sh').className = 'sh ' + sh.className;
   $('b-per').textContent = $('period').textContent;
@@ -466,7 +531,7 @@ function render() {
   const bg = bugMode(SCR) ? '' : (SCR.bg || set.bgImage || '');   // fondo propio o el general; en el marcador tipo TV, ninguno (transparente)
   $('stage').style.backgroundImage = bg ? `url("${bg.replace(/"/g, '%22')}")` : '';
   $('stage').classList.toggle('hasbg', !!bg);
-  const tplMode = !!set.bgImage && !!set.bgOnly, topOn = bugMode(SCR) && SCR.bugStyle !== 'tv', wideTop = topOn && topVariant(SCR) === 'wide';
+  const tplMode = !!set.bgImage && !!set.bgOnly, topOn = bugMode(SCR) && styleOf(SCR) === 'top', wideTop = topOn && topVariant(SCR) === 'wide';
   const topBg = wideTop && set.bgImage ? set.bgImage : '';
   document.querySelector('#stage>.top').classList.toggle('tpl', topOn && tplMode);
   R.classList.toggle('bgonly', (!!bg || !!topBg) && !!set.bgOnly && (!topOn || wideTop));

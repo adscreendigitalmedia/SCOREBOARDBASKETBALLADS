@@ -74,7 +74,8 @@ function cleanScreen(x) {
     bugX: Math.round(Math.max(0, Math.min(100, Number(x.bugX) || 0)) * 10) / 10, bugY: Math.round(Math.max(0, Math.min(100, Number(x.bugY) || 0)) * 10) / 10,
     bugW: Math.round(Math.max(3, Math.min(100, Number(x.bugW) || 50)) * 10) / 10, bugH: Math.round(Math.max(3, Math.min(100, Number(x.bugH) || 8)) * 10) / 10,
     // estilo del marcador tipo TV: top = la fila de arriba del tablero (mismo diseño), tv = banner compacto
-    bugStyle: x.bugStyle === 'tv' ? 'tv' : 'top' };
+    bugStyle: ['tv', 'custom'].includes(x.bugStyle) ? x.bugStyle : 'top',   // custom = diseño TV propio (imagen subida)
+    bugLayout: String(x.bugLayout || '').replace(/[^\w-]/g, '').slice(0, 24) };
   for (const [k, [lo, hi]] of Object.entries(SCREEN_LIMITS)) out[k] = Math.round(Math.max(lo, Math.min(hi, Number(x[k] ?? BASE_SCREEN[k]) || BASE_SCREEN[k])));
   // X / Y nunca pasan del máximo real (el marcador no puede salirse): así al restar se mueve de inmediato
   out.bugX = Math.min(out.bugX, Math.round((100 - out.bugW) * 10) / 10);
@@ -86,6 +87,32 @@ function cleanScreen(x) {
   }
   return out;
 }
+// ---- diseños TV propios: una imagen subida (PNG) + dónde va cada dato, en % de la imagen ----
+const LAYOUT_FIELDS = {
+  hLogo: { x: 0, y: 0, w: 9, h: 100 }, hName: { x: 9, y: 0, w: 16, h: 60, size: 70 },
+  hFouls: { x: 9, y: 60, w: 5, h: 40, pre: 'F ' }, hTO: { x: 14, y: 60, w: 5, h: 40, pre: 'TF ' }, hBonus: { x: 19, y: 60, w: 6, h: 40, pre: 'BONUS', color: '#ffd400' },
+  hScore: { x: 25, y: 0, w: 11, h: 100, size: 85 }, hPoss: { x: 36, y: 0, w: 2, h: 100, pre: '◀', color: '#ffd400', size: 50 },
+  aLogo: { x: 38, y: 0, w: 9, h: 100 }, aName: { x: 47, y: 0, w: 16, h: 60, size: 70 },
+  aFouls: { x: 47, y: 60, w: 5, h: 40, pre: 'F ' }, aTO: { x: 52, y: 60, w: 5, h: 40, pre: 'TF ' }, aBonus: { x: 57, y: 60, w: 6, h: 40, pre: 'BONUS', color: '#ffd400' },
+  aScore: { x: 63, y: 0, w: 11, h: 100, size: 85 }, aPoss: { x: 74, y: 0, w: 2, h: 100, pre: '▶', color: '#ffd400', size: 50 },
+  period: { x: 76, y: 0, w: 7, h: 100, size: 50 }, clock: { x: 83, y: 0, w: 11, h: 100, size: 75 }, shot: { x: 94, y: 0, w: 6, h: 100, size: 75, color: '#ffd400' },
+};
+function cleanLayout(x) {
+  x = x || {};
+  const r1 = (v, lo, hi, d) => { const n = Number(v); return Math.round(Math.max(lo, Math.min(hi, Number.isFinite(n) ? n : d)) * 10) / 10; };
+  const fields = {};
+  for (const [k, d] of Object.entries(LAYOUT_FIELDS)) {
+    const f = { ...d, ...((x.fields || {})[k] || {}) };
+    const w = r1(f.w, 0.5, 100, d.w), h = r1(f.h, 0.5, 100, d.h);
+    fields[k] = { on: f.on !== false, x: Math.min(r1(f.x, 0, 100, d.x), 100 - w), y: Math.min(r1(f.y, 0, 100, d.y), 100 - h), w, h,
+      size: r1(f.size, 5, 150, d.size || 60),                                   // letra: % del alto de su caja
+      color: /^#[0-9a-f]{6}$/i.test(f.color) ? f.color : (d.color || '#ffffff'),
+      align: ['l', 'c', 'r'].includes(f.align) ? f.align : 'c', pre: String(f.pre ?? d.pre ?? '').slice(0, 12), short: !!f.short };
+  }
+  return { id: String(x.id || 'd' + Date.now().toString(36)).replace(/[^\w-]/g, '').slice(0, 24) || 'd', name: String(x.name || 'Diseño TV').slice(0, 40),
+    img: typeof x.img === 'string' && /^\/bg\/[\w.-]+$/.test(x.img) ? x.img : '', ar: r1(x.ar, 0.05, 40, 8), font: String(x.font || '').replace(/[^\w ,'-]/g, '').slice(0, 60), fields };
+}
+
 const mainScreen = () => ({ id: 'principal', name: 'Principal', bg: '', layout: 'full', ...BASE_SCREEN });
 
 function defaults() {
@@ -120,7 +147,8 @@ function defaults() {
       viewLead: '#ffd400',  // el valor que va ganando
       viewText: '#ffffff',  // resto del texto
       viewClear: false,     // true = sin fondos (se ve la imagen de fondo / plantilla)
-      screens: [mainScreen()],   // pantallas: display.html?p=<id>  (Principal = display.html)
+      screens: [mainScreen()],
+      bugLayouts: [],            // diseños TV propios (imagen + posición de cada dato)   // pantallas: display.html?p=<id>  (Principal = display.html)
       center: 'black',      // black | transparent | green
       bottom: 'stats',      // cuadro inferior de cada equipo: stats | note
       centerView: 'none',   // none | leaders | compare
@@ -146,6 +174,7 @@ function migrate(saved) {
   s.settings = { ...d.settings, ...saved.settings };
   s.settings.screens = (Array.isArray(s.settings.screens) && s.settings.screens.length ? s.settings.screens : [mainScreen()]).map(cleanScreen);
   if (!s.settings.screens.some((x) => x.id === 'principal')) s.settings.screens.unshift(mainScreen());
+  s.settings.bugLayouts = (Array.isArray(s.settings.bugLayouts) ? s.settings.bugLayouts : []).map(cleanLayout);
   for (const x of s.settings.screens) if (x.id === 'principal' && !(saved.settings?.screens || []).find((y) => y.id === 'principal')?.layout) x.layout = 'full';
   for (const k of ['home', 'away']) {
     s.teams[k] = { ...d.teams[k], ...(saved.teams || {})[k] };
@@ -297,6 +326,23 @@ function run(c) {
       const r = getParent(String(c.path)); if (!r) return false; r[0][r[1]] = c.value;
       const m = String(c.path).match(/^settings\.screens\.(\d+)\./);                       // medidas de pantalla: siempre dentro de rango
       if (m && S.settings.screens[m[1]]) S.settings.screens[m[1]] = cleanScreen(S.settings.screens[m[1]]);
+      const ml = String(c.path).match(/^settings\.bugLayouts\.(\d+)\./);
+      if (ml && S.settings.bugLayouts[ml[1]]) S.settings.bugLayouts[ml[1]] = cleanLayout(S.settings.bugLayouts[ml[1]]);
+      break;
+    }
+    // ---- diseños TV propios ----
+    case 'layoutAdd': {                       // imagen ya subida (/bg/...) + proporción; con fields = importado de un .json
+      if (S.settings.bugLayouts.length >= 20) return false;
+      const L = cleanLayout({ name: c.name, img: c.img, ar: c.ar, font: c.font, fields: c.fields, id: 'd' + Date.now().toString(36) });
+      if (!L.img) return false;
+      S.settings.bugLayouts.push(L);
+      break;
+    }
+    case 'layoutDel': {
+      const n = S.settings.bugLayouts.length;
+      S.settings.bugLayouts = S.settings.bugLayouts.filter((x) => x.id !== c.id);
+      if (S.settings.bugLayouts.length === n) return false;
+      for (const x of S.settings.screens) if (x.bugLayout === c.id) { x.bugLayout = ''; if (x.bugStyle === 'custom') x.bugStyle = 'tv'; }
       break;
     }
     // ---- pantallas ----

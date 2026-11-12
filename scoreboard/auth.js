@@ -45,7 +45,7 @@ const BY_ACTION = {
     'periodNext', 'periodPrev', 'horn'],
   jugada: ['possession', 'possessionToggle', 'timeoutStart', 'breakStart', 'timerToggle', 'timerAdjust', 'timerStop', 'final', 'popup', 'popupHide'],
   anotacion: ['playerStat', 'shot', 'undo', 'saveTeam', 'loadTeam', 'importRoster'],
-  pantallas: ['screenAdd', 'screenDel', 'screenFit'],
+  pantallas: ['screenAdd', 'screenDel', 'screenFit', 'layoutAdd', 'layoutDel'],
   nuevojuego: ['resetGame', 'scheduleStart'],
   admin: ['deleteTeam'],
 };
@@ -54,7 +54,7 @@ for (const [role, list] of Object.entries(BY_ACTION)) for (const a of list) ACTI
 
 // set / inc: depende de qué valor se cambia
 const SETTINGS_JUGADA = ['centerView', 'timeoutMs', 'popupAuto'];
-const SETTINGS_PANTALLAS = ['screens', 'title', 'center', 'bottom', 'bgImage', 'bgOnly', 'viewBg', 'viewHead', 'viewTeams', 'viewLine', 'viewLabel', 'viewLead', 'viewText', 'viewClear'];
+const SETTINGS_PANTALLAS = ['screens', 'bugLayouts', 'title', 'center', 'bottom', 'bgImage', 'bgOnly', 'viewBg', 'viewHead', 'viewTeams', 'viewLine', 'viewLabel', 'viewLead', 'viewText', 'viewClear'];
 function rolesFor(c) {
   if (c.a === 'set' || c.a === 'inc') {
     const p = String(c.path || '').split('.');

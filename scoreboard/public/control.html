@@ -77,6 +77,18 @@
   .mini{position:relative;width:260px;max-width:100%;background:repeating-conic-gradient(#1c2128 0 25%,#0d1117 0 50%) 0 0/16px 16px;border:1px solid #444c56;border-radius:4px;flex:none;touch-action:none}
   .mini .r{position:absolute;background:rgba(31,111,235,.85);border:1px solid #fff;border-radius:2px;cursor:grab;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;overflow:hidden;white-space:nowrap}
   .mini .r.drag{cursor:grabbing;background:rgba(46,160,67,.9)}
+  .lay{border:1px solid #30363d;border-radius:8px;padding:10px;margin:8px 0;background:#0d1117}
+  .led{position:relative;width:100%;max-width:760px;background:repeating-conic-gradient(#1c2128 0 25%,#0d1117 0 50%) 0 0/16px 16px;border:1px solid #444c56;touch-action:none;user-select:none}
+  .led>img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}
+  .led .lr{position:absolute;border:1px dashed #58a6ff;background:rgba(31,111,235,.18);color:#fff;font-size:10px;line-height:1;overflow:hidden;cursor:move;
+    display:flex;align-items:center;justify-content:center;text-shadow:0 0 3px #000;white-space:nowrap}
+  .led .lr.sel{border:1px solid #ffd400;background:rgba(255,212,0,.22);z-index:2}
+  .led .lr.off{display:none}
+  .led .lr .hd{position:absolute;right:0;bottom:0;width:9px;height:9px;background:#ffd400;cursor:nwse-resize}
+  .lay table{border-collapse:collapse;font-size:12px;margin-top:6px}
+  .lay td,.lay th{padding:2px 4px;border-bottom:1px solid #21262d;text-align:left;white-space:nowrap}
+  .lay td input[type=number]{width:58px}.lay td input[type=text]{width:70px}.lay td input[type=color]{width:34px;height:24px;padding:0}
+  .lay tr.sel td{background:#2d2a12}
   .nudge{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none}
   .nudge button{min-width:38px;font-size:15px;padding:5px 8px}
 </style>
@@ -268,6 +280,15 @@
     </div>
     <button class="go" id="nsAdd" style="margin-top:18px">Agregar pantalla</button>
   </div>
+  <h4>Diseños TV propios (sube tu imagen)</h4>
+  <div class="kbd">Haz tu banner en Photoshop / Canva (PNG, puede tener transparencia) y súbelo. Luego arrastra cada dato (puntos, nombres, reloj…) a su lugar sobre la imagen.
+    En cada pantalla elige <b>Estilo: Diseño propio</b> y el diseño. Con <b>Exportar</b> te llevas el diseño (imagen incluida) a otro servidor y lo subes con <b>Importar</b>.</div>
+  <div class="row" style="margin-top:6px">
+    <div style="flex:1;min-width:160px"><label>Nombre del diseño</label><input type="text" id="nlName" placeholder="ej. Banner NBA azul"></div>
+    <div><label>Nuevo: sube la imagen</label><input type="file" id="nlImg" accept="image/png,image/webp,image/jpeg,image/svg+xml"></div>
+    <div><label>Importar diseño (.json)</label><input type="file" id="nlJson" accept=".json,application/json"></div>
+  </div>
+  <div id="layouts"></div>
   <h4>General</h4>
   <div class="row">
     <div style="flex:2;min-width:220px"><label>Título superior</label><input type="text" data-path="settings.title"></div>
@@ -385,7 +406,7 @@ const screenUrl = (sc) => `${location.origin}/display.html${sc.id === 'principal
 let screensKey = '';
 function renderScreens() {
   const list = (S && S.settings.screens) || [];
-  const key = list.map((x) => x.id).join(',');
+  const key = list.map((x) => x.id).join(',') + '|' + (S.settings.bugLayouts || []).map((L) => L.id + L.name).join(',');
   if (key !== screensKey) {                     // se redibuja solo si cambia la lista (los valores los llena paint)
     screensKey = key;
     $('#screens').innerHTML = list.map((sc, i) => {
@@ -406,7 +427,8 @@ function renderScreens() {
           <span class="warnmsg" data-sw="${i}"></span></div>
         <div class="row" style="margin-top:6px"><span class="kbd">Marcador tipo TV (el resto queda transparente para anuncios):</span>
           <div><label>Estilo</label><select data-path="${P}.bugStyle">
-            <option value="top">Fila de arriba del tablero</option><option value="tv">Banner TV compacto</option></select></div>
+            <option value="top">Fila de arriba del tablero</option><option value="tv">Banner TV compacto</option><option value="custom">Diseño propio (imagen)</option></select></div>
+          <div><label>Diseño propio</label><select data-path="${P}.bugLayout"><option value="">—</option>${(S.settings.bugLayouts || []).map((L) => `<option value="${L.id}">${esc(L.name)}</option>`).join('')}</select></div>
           <div><label>Posición</label><select data-path="${P}.bugPos">
             <option value="tl">Arriba izquierda</option><option value="tc">Arriba</option><option value="tr">Arriba derecha</option>
             <option value="ml">Centro izquierda</option><option value="mc">Centro</option><option value="mr">Centro derecha</option>
@@ -421,6 +443,7 @@ function renderScreens() {
             <option value="bl,40,8">Banner esquina abajo izquierda</option><option value="br,40,8">Banner esquina abajo derecha</option>
             <option value="tl,40,8">Banner esquina arriba izquierda</option><option value="tr,40,8">Banner esquina arriba derecha</option>
             <option value="bc,100,10">Franja completa abajo</option><option value="tc,100,25">Franja arriba (póster)</option></select></div>
+          <button class="sm" data-fitimg="${i}" style="margin-top:18px" title="Cambia el Alto % para que el área tenga la forma de la imagen del diseño propio">Alto según la imagen</button>
           <span class="kbd" data-bugpx="${i}"></span></div>
         <div class="row" style="margin-top:6px;align-items:flex-start">
           <div class="mini" data-mini="${i}"><div class="r">TV</div></div>
@@ -455,7 +478,7 @@ function renderScreens() {
     if (fy) fy.max = Math.round((100 - sc.bugH) * 10) / 10;
     const free = sc.bugW >= 100 && sc.bugH >= 100 ? 'nada' : sc.bugW >= 100 ? `${sc.w}×${sc.h - bh} px` : sc.bugH >= 100 ? `${sc.w - bw}×${sc.h} px` : `toda la pantalla menos el marcador (${Math.round(100 - sc.bugW * sc.bugH / 100)}%)`;
     if (bp) bp.textContent = `= ${bw}×${bh} px; libre para anuncios: ${free}`;
-    const forma = sc.bugStyle === 'tv' ? (bw / bh >= 5 ? 'banner' : bw / bh >= 2.2 ? 'barra' : bw / bh >= 0.8 ? 'caja' : 'vertical')
+    const forma = sc.bugStyle === 'custom' ? 'diseño propio' : sc.bugStyle === 'tv' ? (bw / bh >= 5 ? 'banner' : bw / bh >= 2.2 ? 'barra' : bw / bh >= 0.8 ? 'caja' : 'vertical')
       : (bw / bh >= 4.5 ? 'fila del tablero: franja' : bw / bh >= 1.3 ? 'fila del tablero: caja' : 'fila del tablero: póster');
     if (tv) { w.textContent = '📺 muestra el marcador tipo TV (' + forma + ', ' + bw + '×' + bh + ' px)'; w.style.color = '#58a6ff'; bg.textContent = ''; return; }
     w.style.color = '';
@@ -551,6 +574,127 @@ document.addEventListener('click', (e) => {
   if (b.dataset.fit) { if (confirm('¿Recalcular márgenes, cajas y letra para este tamaño? Se pierden los ajustes manuales de proporciones.')) send({ a: 'screenFit', id: b.dataset.fit }); }
   else if (b.dataset.sdel) { if (confirm('¿Borrar esta pantalla? Su enlace de OBS dejará de mostrarla (mostrará la Principal).')) send({ a: 'screenDel', id: b.dataset.sdel }); }
   else if (b.dataset.copy) { navigator.clipboard && navigator.clipboard.writeText(b.dataset.copy).then(() => toast('Enlace copiado', true), () => toast(b.dataset.copy, true)); }
+});
+// ---------- diseños TV propios ----------
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const LF_NAMES = { hLogo: 'Logo local', hName: 'Nombre local', hScore: 'Puntos local', hFouls: 'Faltas local', hTO: 'Tiempos local', hBonus: 'Bonus local', hPoss: 'Posesión local',
+  aLogo: 'Logo visita', aName: 'Nombre visita', aScore: 'Puntos visita', aFouls: 'Faltas visita', aTO: 'Tiempos visita', aBonus: 'Bonus visita', aPoss: 'Posesión visita',
+  period: 'Periodo', clock: 'Reloj', shot: 'Reloj 24' };
+const LF_SAMPLE = { hLogo: 'LOGO', hName: 'LOCAL', hScore: '88', hFouls: 'F 3', hTO: 'TF 2', hBonus: 'BONUS', hPoss: '◀',
+  aLogo: 'LOGO', aName: 'VISITA', aScore: '76', aFouls: 'F 4', aTO: 'TF 1', aBonus: 'BONUS', aPoss: '▶', period: 'Q4', clock: '2:45', shot: '14' };
+const LF_PRE = { hFouls: 'texto antes', aFouls: 'texto antes', hTO: 'texto antes', aTO: 'texto antes', hBonus: 'texto', aBonus: 'texto', hPoss: 'símbolo', aPoss: 'símbolo' };
+const imgRatio = (src) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im.naturalWidth / im.naturalHeight); im.onerror = () => no(new Error('imagen no válida')); im.src = src; });
+async function uploadLayoutImg(blob, ext) {
+  const r = await fetch(`/api/upload?kind=bg&team=tvlayout&ext=${ext}`, { method: 'POST', body: blob });
+  const j = await r.json(); if (!j.ok) throw new Error(j.error || 'error');
+  const url = URL.createObjectURL(blob); try { return { img: j.path, ar: Math.round((await imgRatio(url)) * 1000) / 1000 }; } finally { URL.revokeObjectURL(url); }
+}
+const extOf = (f) => (f.type.split('/')[1] || f.name.split('.').pop() || 'png').replace('svg+xml', 'svg').toLowerCase();
+$('#nlImg').onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const up = await uploadLayoutImg(f, extOf(f)); send({ a: 'layoutAdd', name: $('#nlName').value.trim() || f.name.replace(/\.[^.]+$/, ''), ...up }); $('#nlName').value = ''; toast('Diseño creado: ahora arrastra cada dato a su lugar', true); }
+  catch (err) { toast('No se pudo subir: ' + err.message); }
+  e.target.value = '';
+};
+$('#nlJson').onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (d.type !== 'scoreboard-tv-layout' || !/^data:image\//.test(d.image || '')) throw new Error('no es un diseño exportado de este scoreboard');
+    const blob = await (await fetch(d.image)).blob(), up = await uploadLayoutImg(blob, extOf(blob));
+    send({ a: 'layoutAdd', name: d.name, font: d.font, fields: d.fields, ...up }); toast('Diseño importado: ' + d.name, true);
+  } catch (err) { toast('No se pudo importar: ' + err.message); }
+  e.target.value = '';
+};
+let layoutsKey = '', lsel = {}, ldrag = null;
+function renderLayouts() {
+  const list = (S && S.settings.bugLayouts) || [];
+  const key = list.map((L) => L.id).join(',');
+  if (key !== layoutsKey) {
+    layoutsKey = key;
+    $('#layouts').innerHTML = list.length ? list.map((L, i) => {
+      const P = `settings.bugLayouts.${i}`;
+      return `<div class="lay" data-lid="${L.id}">
+        <div class="row">
+          <div style="flex:1;min-width:160px"><label>Nombre</label><input type="text" data-path="${P}.name"></div>
+          <div><label>Letra (fuente, opcional)</label><input type="text" data-path="${P}.font" placeholder="ej. Oswald, Arial Black" style="width:170px"></div>
+          <div><label>Cambiar imagen</label><input type="file" data-limg="${i}" accept="image/png,image/webp,image/jpeg,image/svg+xml"></div>
+          <button class="sm" data-lexp="${i}" style="margin-top:18px">Exportar</button>
+          <button class="sm stop" data-ldel="${L.id}" style="margin-top:18px">Borrar</button>
+        </div>
+        <div class="kbd" style="margin:6px 0">Arrastra cada caja para moverla; la esquina amarilla cambia su tamaño. Clic en una caja para editarla abajo.</div>
+        <div class="led" data-led="${i}"><img alt="">${Object.keys(LF_NAMES).map((k) => `<div class="lr" data-lf="${k}">${LF_SAMPLE[k]}<span class="hd"></span></div>`).join('')}</div>
+        <details data-ldet="${i}"><summary>Datos: mostrar, letra, color, posición exacta</summary>
+          <table><tr><th>Ver</th><th>Dato</th><th>Texto</th><th>Letra %</th><th>Color</th><th>Alinear</th><th>X %</th><th>Y %</th><th>Ancho %</th><th>Alto %</th></tr>
+          ${Object.keys(LF_NAMES).map((k) => { const F = `${P}.fields.${k}`; return `<tr data-lrow="${k}">
+            <td><input type="checkbox" data-path="${F}.on" data-type="bool"></td><td>${LF_NAMES[k]}</td>
+            <td>${LF_PRE[k] ? `<input type="text" data-path="${F}.pre" title="${LF_PRE[k]}">` : /Name$/.test(k) ? `<label style="margin:0"><input type="checkbox" data-path="${F}.short" data-type="bool"> siglas</label>` : ''}</td>
+            <td>${/Logo$/.test(k) ? '' : `<input type="number" min="5" max="150" data-path="${F}.size" data-type="num">`}</td>
+            <td>${/Logo$/.test(k) ? '' : `<input type="color" data-path="${F}.color">`}</td>
+            <td>${/Logo$/.test(k) ? '' : `<select data-path="${F}.align"><option value="l">Izq.</option><option value="c">Centro</option><option value="r">Der.</option></select>`}</td>
+            ${['x', 'y', 'w', 'h'].map((q) => `<td><input type="number" step="0.5" min="0" max="100" data-path="${F}.${q}" data-type="num"></td>`).join('')}</tr>`; }).join('')}
+          </table></details>
+      </div>`;
+    }).join('') : '<div class="kbd" style="margin-top:6px">Todavía no hay diseños propios.</div>';
+  }
+  list.forEach((L, i) => {
+    const ed = $(`[data-led="${i}"]`); if (!ed) return;
+    ed.style.aspectRatio = String(L.ar);
+    const im = ed.firstElementChild; if (im.getAttribute('src') !== L.img) im.src = L.img;
+    for (const el of ed.querySelectorAll('.lr')) {
+      const f = L.fields[el.dataset.lf];
+      el.classList.toggle('off', !f.on); el.classList.toggle('sel', lsel[L.id] === el.dataset.lf);
+      if (ldrag && ldrag.el === el) continue;          // mientras se arrastra, manda el mouse
+      Object.assign(el.style, { left: f.x + '%', top: f.y + '%', width: f.w + '%', height: f.h + '%' });
+    }
+    for (const tr of document.querySelectorAll(`[data-lid="${L.id}"] tr[data-lrow]`)) tr.classList.toggle('sel', lsel[L.id] === tr.dataset.lrow);
+  });
+}
+document.addEventListener('pointerdown', (e) => {
+  const el = e.target.closest('.led .lr'); if (!el) return;
+  const ed = el.parentElement, i = +ed.dataset.led, L = S.settings.bugLayouts[i], k = el.dataset.lf, f = L.fields[k];
+  lsel[L.id] = k; renderLayouts();
+  ldrag = { el, ed, i, k, f: { ...f }, resize: e.target.classList.contains('hd'), sx: e.clientX, sy: e.clientY, box: ed.getBoundingClientRect() };
+  el.setPointerCapture(e.pointerId); e.preventDefault();
+});
+document.addEventListener('pointermove', (e) => {
+  if (!ldrag) return;
+  const d = ldrag, dx = (e.clientX - d.sx) / d.box.width * 100, dy = (e.clientY - d.sy) / d.box.height * 100, r = (v) => Math.round(v * 2) / 2;
+  if (d.resize) { d.w = r(Math.max(0.5, Math.min(100 - d.f.x, d.f.w + dx))); d.h = r(Math.max(0.5, Math.min(100 - d.f.y, d.f.h + dy))); d.el.style.width = d.w + '%'; d.el.style.height = d.h + '%'; }
+  else { d.x = r(Math.max(0, Math.min(100 - d.f.w, d.f.x + dx))); d.y = r(Math.max(0, Math.min(100 - d.f.h, d.f.y + dy))); d.el.style.left = d.x + '%'; d.el.style.top = d.y + '%'; }
+});
+document.addEventListener('pointerup', () => {
+  if (!ldrag) return;
+  const d = ldrag; ldrag = null;
+  const F = `settings.bugLayouts.${d.i}.fields.${d.k}`;
+  for (const q of ['x', 'y', 'w', 'h']) if (d[q] != null && d[q] !== d.f[q]) send({ a: 'set', path: `${F}.${q}`, value: d[q] });
+  renderLayouts();
+});
+document.addEventListener('change', async (e) => {
+  const el = e.target; if (!el.dataset || el.dataset.limg == null || !el.files[0]) return;
+  const i = +el.dataset.limg, f = el.files[0];
+  try { const up = await uploadLayoutImg(f, extOf(f)); send({ a: 'set', path: `settings.bugLayouts.${i}.ar`, value: up.ar }); send({ a: 'set', path: `settings.bugLayouts.${i}.img`, value: up.img }); toast('Imagen cambiada', true); }
+  catch (err) { toast('No se pudo subir: ' + err.message); }
+  el.value = '';
+});
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-lexp],[data-ldel],[data-fitimg]'); if (!b) return;
+  if (b.dataset.ldel) { if (confirm('¿Borrar este diseño? Las pantallas que lo usan pasan al Banner TV compacto.')) send({ a: 'layoutDel', id: b.dataset.ldel }); return; }
+  if (b.dataset.fitimg != null) {
+    const i = +b.dataset.fitimg, sc = S.settings.screens[i], L = (S.settings.bugLayouts || []).find((x) => x.id === sc.bugLayout);
+    if (!L) return toast('Primero elige un diseño propio en esta pantalla');
+    const h = Math.round(sc.bugW * sc.w / L.ar / sc.h * 10) / 10;
+    if (h > 100) send({ a: 'set', path: `settings.screens.${i}.bugW`, value: Math.round(100 * sc.h * L.ar / sc.w * 10) / 10 });
+    send({ a: 'set', path: `settings.screens.${i}.bugH`, value: Math.min(100, h) }); return;
+  }
+  const L = S.settings.bugLayouts[+b.dataset.lexp];
+  try {
+    const blob = await (await fetch(L.img)).blob();
+    const image = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(blob); });
+    const out = { type: 'scoreboard-tv-layout', v: 1, name: L.name, ar: L.ar, font: L.font, fields: L.fields, image };
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], { type: 'application/json' }));
+    a.download = (L.name.replace(/[^\w-]+/g, '-') || 'diseno') + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (err) { toast('No se pudo exportar: ' + err.message); }
 });
 $('#logout').onclick = async (e) => { e.preventDefault(); await fetch('/api/logout', { method: 'POST' }); location.href = '/login.html'; };
 const get = (p) => p.split('.').reduce((o, k) => (o == null ? o : o[k]), S);
@@ -765,7 +909,7 @@ function connect() {
     if (m.t === 'state') {
       S = m.s; label = m.label;
       clk = { g: S.game.ms, s: S.shot.ms, gr: S.game.running, sr: S.shot.running, tm: S.timer.ms, tr: S.timer.running, at: performance.now() };
-      renderScreens(); renderPreview(); paint();
+      renderScreens(); renderLayouts(); renderPreview(); paint();
       if ((S.scheduleId || null) !== schedCur) loadSched();
       clearTimeout(gt); gt = setTimeout(loadLists, 800);   // el historial cambia con el marcador
     } else if (m.t === 'clock') clk = { g: m.g, s: m.s, gr: m.gr, sr: m.sr, tm: m.tm, tr: m.tr, at: performance.now() };
