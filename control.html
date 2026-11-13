@@ -11,8 +11,16 @@
   .dot{width:12px;height:12px;border-radius:50%;background:#f85149}.dot.ok{background:#3fb950}
   .roles a{color:#8b949e;text-decoration:none;border:1px solid #30363d;border-radius:14px;padding:3px 10px;font-size:12px;margin-right:4px}
   .roles a.on{background:#1f6feb;color:#fff;border-color:#1f6feb}
-  .clocks{display:flex;gap:22px;align-items:baseline;margin-left:auto;font-variant-numeric:tabular-nums}
-  .clocks b{font-size:30px}.clocks .sh{color:#ffd400}.clocks .tm{color:#ff7b72}
+  .menu{position:relative}
+  .menubtn{font-weight:600}.menubtn .car{font-size:10px;opacity:.7}
+  .dd{position:absolute;top:calc(100% + 6px);left:0;min-width:250px;background:#161b22;border:1px solid #30363d;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.5);padding:6px;z-index:20;max-height:calc(100vh - 70px);overflow-y:auto}
+  .dd a{display:block;padding:8px 10px;border-radius:6px;color:#e6edf3;text-decoration:none;font-size:14px}
+  .dd a:hover{background:#21262d}
+  .ddh{color:#8b949e;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px 3px;border-top:1px solid #30363d;margin-top:4px}
+  .ddh:first-child{border-top:0;margin-top:0}
+  .dd .roles a{display:block;border:0;border-radius:6px;padding:7px 10px;margin:0;font-size:14px;color:#e6edf3}
+  .dd .roles a.on{background:#1f6feb;color:#fff}
+  .ddf{border-top:1px solid #30363d;margin-top:4px;padding:8px 10px 4px;color:#8b949e;font-size:11px;word-break:break-all}
   main{padding:12px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
   section{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px}
   h3{margin:0 0 8px;font-size:15px;color:#8b949e;text-transform:uppercase;letter-spacing:1px}
@@ -38,8 +46,9 @@
   .tag:empty{display:none}
   .pfw{color:#ffd400}.pfx{color:#ff7b72}
   table.games td{text-align:left;padding:4px 6px}
-  .who{display:flex;gap:8px;align-items:center;font-size:12px;color:#8b949e}
-  .who a{color:#58a6ff;text-decoration:none}
+  .who{display:flex;gap:14px;align-items:center;margin-left:auto;font-size:13px;color:#8b949e}
+  .who .conn{display:flex;gap:6px;align-items:center}
+  .who .user b{color:#e6edf3}
   .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#b62324;color:#fff;padding:10px 16px;border-radius:8px;
     font-weight:600;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.5);max-width:calc(100% - 32px);opacity:0;pointer-events:none;transition:opacity .2s}
   .toast.ok{background:#238636}.toast.on{opacity:1}
@@ -95,11 +104,27 @@
 </head>
 <body>
 <header>
-  <span class="dot" id="dot"></span><span id="status">Conectando…</span>
-  <span class="kbd">Pantalla: <code id="durl"></code></span>
-  <nav class="roles" id="roles"></nav>
-  <span class="who"><b id="uname"></b><a href="/admin.html" id="adminlink" hidden>Dashboard</a><a href="/login.html?change=1&next=/control.html">Contraseña</a><a href="#" id="logout">Salir</a></span>
-  <div class="clocks"><b class="tm" id="ct"></b><span id="plabel"></span><b id="cg">10:00</b><b class="sh" id="cs">24</b></div>
+  <div class="menu">
+    <button class="menubtn" id="menuBtn" aria-haspopup="true" aria-expanded="false">☰ Menú <span class="car">▾</span></button>
+    <div class="dd" id="menuDd" hidden>
+      <div class="ddh" data-need="historial">Administración</div>
+      <a href="/admin.html#resumen" data-need="admin">🏠 Inicio (Dashboard)</a>
+      <a href="/admin.html#usuarios" data-need="admin">👥 Usuarios y permisos</a>
+      <a href="/admin.html#programar" data-need="admin">📅 Programar juegos</a>
+      <a href="/admin.html#juegos" data-need="historial">🏀 Juegos (historial)</a>
+      <div class="ddh" id="rolesH">Ver en el panel</div>
+      <nav class="roles" id="roles"></nav>
+      <div class="ddh">Mi cuenta</div>
+      <a href="/login.html?change=1&next=/control.html">🔑 Cambiar contraseña</a>
+      <a href="#" id="logout">🚪 Cerrar sesión</a>
+      <div class="ddf">Pantalla: <code id="durl"></code></div>
+    </div>
+  </div>
+  <div class="who">
+    <span class="conn"><span class="dot" id="dot"></span><span id="status">Conectando…</span></span>
+    <span class="user">👤 <b id="uname"></b></span>
+    <button class="sm" id="logout2">Salir</button>
+  </div>
 </header>
 
 <div class="toast" id="toast"></div>
@@ -350,7 +375,8 @@ function applyRoles() {
     s.hidden = !hasRole(s.dataset.rol) || (ROL !== 'todo' && s.dataset.rol !== ROL);
   });
   $('#uname').textContent = ME.name || ME.username;
-  $('#adminlink').hidden = !hasRole('historial');      // admin, o quien edita el historial
+  $$('#menuDd [data-need]').forEach((a) => (a.hidden = !hasRole(a.dataset.need)));   // dashboard: admin, o quien edita el historial
+  $('#rolesH').hidden = tabs.length <= 2;
   document.title = 'Scoreboard - ' + (ROL === 'todo' ? (ME.name || ME.username) : ROLE_NAMES[ROL]);
 }
 // ---------- vista previa en vivo: para todos los usuarios; cada quien recuerda su elección en su navegador ----------
@@ -701,7 +727,13 @@ document.addEventListener('click', async (e) => {
     a.download = (L.name.replace(/[^\w-]+/g, '-') || 'diseno') + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   } catch (err) { toast('No se pudo exportar: ' + err.message); }
 });
-$('#logout').onclick = async (e) => { e.preventDefault(); await fetch('/api/logout', { method: 'POST' }); location.href = '/login.html'; };
+const logout = async (e) => { e.preventDefault(); await fetch('/api/logout', { method: 'POST' }); location.href = '/login.html'; };
+$('#logout').onclick = logout; $('#logout2').onclick = logout;
+// menú desplegable: abre/cierra con el botón; se cierra al tocar fuera o con Esc
+const menu = (open) => { $('#menuDd').hidden = !open; $('#menuBtn').setAttribute('aria-expanded', open); };
+$('#menuBtn').onclick = (e) => { e.stopPropagation(); menu($('#menuDd').hidden); };
+document.addEventListener('click', (e) => { if (!e.target.closest('.menu')) menu(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') menu(false); });
 const get = (p) => p.split('.').reduce((o, k) => (o == null ? o : o[k]), S);
 const send = (o) => ws && ws.readyState === 1 && ws.send(JSON.stringify({ t: 'cmd', ...o }));
 $('#durl').textContent = `${location.origin}/display.html`;
@@ -847,20 +879,9 @@ function paint() {
     }
     else el.value = v ?? '';
   });
-  $('#plabel').textContent = S.final ? 'FINAL' : label;
   $('#scrAdv').hidden = !S.settings.screensOn;     // ajustes de pantallas: ocultos hasta que se activan
 }
 const two = (n) => String(n).padStart(2, '0');
-function loop() {
-  const el = performance.now() - clk.at;
-  const g = Math.max(0, clk.g - (clk.gr ? el : 0)), s = Math.max(0, clk.s - (clk.sr ? el : 0)), tm = Math.max(0, clk.tm - (clk.tr ? el : 0));
-  $('#cg').textContent = g < 60000 ? (Math.floor(g / 100) / 10).toFixed(1) : Math.floor(Math.ceil(g / 1000) / 60) + ':' + two(Math.ceil(g / 1000) % 60);
-  const off = S ? S.settings.shotOffMs || 0 : 0;
-  $('#cs').textContent = off > 0 && g < off ? '—' : Math.ceil(s / 1000);
-  $('#ct').textContent = S && S.timer.kind ? `${S.timer.label} ${Math.floor(Math.ceil(tm / 1000) / 60)}:${two(Math.ceil(tm / 1000) % 60)}` : '';
-  requestAnimationFrame(loop);
-}
-loop();
 
 // ---------- juego programado: al entrar, cada usuario ve el juego que le asignaron ----------
 let schedCur = null;
