@@ -120,7 +120,7 @@
         <button class="go" data-cue="compare">Preparar</button><span class="st"></span></div>
       <div class="card" data-g="leaders"><b>Líderes del partido</b><p>Puntos, rebotes y asistencias de cada equipo.</p>
         <button class="go" data-cue="leaders">Preparar</button><span class="st"></span></div>
-      <div class="card" data-g="lines"><b>Marcador por cuartos</b><p>Puntos de cada periodo y total.</p>
+      <div class="card" data-g="lines"><b>Marcador por periodos</b><p>Puntos de cada periodo y total.</p>
         <button class="go" data-cue="lines">Preparar</button><span class="st"></span></div>
     </div>
   </section>
@@ -169,7 +169,7 @@
 <script>
 const $ = (s) => document.querySelector(s), $$ = (s) => document.querySelectorAll(s);
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const NAMES = { player: 'Ficha de jugador', compare: 'Comparativa', leaders: 'Líderes', lines: 'Marcador por cuartos' };
+const NAMES = { player: 'Ficha de jugador', compare: 'Comparativa', leaders: 'Líderes', lines: 'Marcador por periodos' };
 let S = null, ws = null, ME = null;
 
 function toast(t, ok) { const e = $('#toast'); e.textContent = t; e.classList.toggle('ok', !!ok); e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 3500); }

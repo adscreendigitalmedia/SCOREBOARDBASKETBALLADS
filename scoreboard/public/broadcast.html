@@ -146,7 +146,7 @@
   html.center #bug { display: none; }
   /* lienzo de 1000 px de ancho con la forma de la caja del centro; cada gráfico la llena completa (como pantalla completa) */
   html.center .g { left: 0 !important; top: 0 !important; bottom: auto !important; width: 100% !important; height: 100% !important; display: flex; flex-direction: column; }
-  /* Líderes, Marcador por cuartos y Comparativa: se despliegan desde arriba y se recogen hacia arriba */
+  /* Líderes, Marcador por periodos y Comparativa: se despliegan desde arriba y se recogen hacia arriba */
   html.center #g-compare, html.center #g-leaders, html.center #g-lines { opacity: 1; transform: none; clip-path: inset(0 0 100% 0); transition: clip-path .45s cubic-bezier(.6,0,.4,1); }
   html.center #g-compare.on, html.center #g-leaders.on, html.center #g-lines.on { clip-path: inset(0 0 0 0); transition: clip-path .75s cubic-bezier(.2,.85,.25,1); }
   html.center .gt { flex: 0 0 auto; height: 70px; font-size: 40px; }
@@ -350,7 +350,7 @@ const teamsRow = (mid) => {
   return `<div class="teamsRow"><div class="h">${H.logo ? `<img src="${esc(H.logo)}" alt="">` : ''}<span data-v="hn"></span></div><div class="mid">${mid}</div><div class="a"><span data-v="an"></span>${A.logo ? `<img src="${esc(A.logo)}" alt="">` : ''}</div></div>`;
 };
 // cada gráfico: build() arma la estructura (una vez), vals() da los valores que se actualizan en su lugar
-const nPer = () => Math.max(4, S.period);                      // 4 cuartos; cada tiempo extra agrega uno
+const nPer = () => Math.max(4, S.period);                      // 4 periodos; cada tiempo extra agrega uno
 const GFX = {
   compare: {
     key: () => S.teams.home.logo + S.teams.away.logo,
@@ -400,7 +400,7 @@ const GFX = {
       const lab = (i) => (i < 4 ? 'Q' + (i + 1) : i === 4 ? 'OT' : (i - 3) + 'OT');
       const head = `<tr><th></th>${Array.from({ length: n }, (_, i) => `<th>${lab(i)}</th>`).join('')}<th>TOTAL</th></tr>`;
       const row = (s, k, i) => `<tr class="row" style="--i:${i};display:table-row"><td class="tn" style="--c:var(--${k})" data-v="${s}n"></td>${Array.from({ length: n }, (_, j) => `<td data-v="${s}${j}"></td>`).join('')}<td class="tot" data-v="${s}t"></td></tr>`;
-      return `<div class="gt">MARCADOR <small>POR CUARTOS</small></div><table>${head}${row('h', 'home', 0)}${row('a', 'away', 1)}</table><div class="foot"></div>`;
+      return `<div class="gt">MARCADOR <small>POR PERIODOS</small></div><table>${head}${row('h', 'home', 0)}${row('a', 'away', 1)}</table><div class="foot"></div>`;
     },
     vals() {
       const V = { hn: teamName(S.teams.home), an: teamName(S.teams.away), ht: S.teams.home.score, at: S.teams.away.score }, F = {};
@@ -423,7 +423,7 @@ const GFX = {
             <div class="pf-facts"><div class="pf-grp"><div class="gl">EN EL JUEGO</div><div class="pf-gs">${[['PTS', 'pts'], ['REB', 'reb'], ['AST', 'ast'], ['FALTAS', 'pf']].map(([l, k]) => `<div data-c="${k}"><span>${l}</span><b data-v="${k}"></b></div>`).join('')}</div></div>
               <div class="pf-grp"><div class="gl">DEL EQUIPO</div><div class="pf-gs"><div><span>% PUNTOS</span><b data-v="share"></b></div></div></div></div>
           </div></div>
-          <div class="pf-cap">PUNTOS POR CUARTO</div>
+          <div class="pf-cap">PUNTOS POR PERIODO</div>
           <div class="pf-slots" style="--n:${n}">${Array.from({ length: n }, (_, j) => `<div class="pf-slot" data-s="${j}"><span>${lab(j)}</span><b data-v="q${j}"></b></div>`).join('')}</div></div>`;
       }
       return `<div class="no" style="--c:var(--${lv.team})"><small>NÚMERO</small><b data-v="n"></b></div><div class="acc"></div>

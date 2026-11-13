@@ -221,7 +221,7 @@
   <div class="row">
     <button class="big go" data-c='{"a":"set","path":"settings.centerView","value":"pro-compare"}'>Comparativa Pro</button>
     <button class="big go" data-c='{"a":"set","path":"settings.centerView","value":"pro-leaders"}'>Líderes Pro</button>
-    <button class="big go" data-c='{"a":"set","path":"settings.centerView","value":"pro-lines"}'>Marcador por cuartos</button>
+    <button class="big go" data-c='{"a":"set","path":"settings.centerView","value":"pro-lines"}'>Marcador por periodos</button>
   </div>
   <div class="row" style="margin-top:8px">
     <select id="cvTeam" style="width:auto;min-width:170px"><option value="home">Local</option><option value="away">Visitante</option></select>
@@ -312,7 +312,7 @@
   <div class="kbd">Marcador compacto con fondo transparente para ponerlo encima del video. En OBS: <b>Fuentes → + → Navegador</b>, pega el enlace
     y pon el mismo ancho y alto de abajo (el tamaño de tu transmisión, normalmente 1920×1080).</div>
   <div class="row" style="margin:6px 0"><a class="btn sm" href="/produccion.html" target="_blank">🎬 Consola Broadcast Pro</a>
-    <span class="kbd"><b>Broadcast Pro</b>: scorebug y gráficos de TV (jugador, comparativa, líderes, cuartos) con Preview y AL AIRE. Escoge <b>Estilo: Broadcast Pro</b> para usarlo con este mismo enlace, u OBS con <code>/broadcast</code>.</span></div>
+    <span class="kbd"><b>Broadcast Pro</b>: scorebug y gráficos de TV (jugador, comparativa, líderes, periodos) con Preview y AL AIRE. Escoge <b>Estilo: Broadcast Pro</b> para usarlo con este mismo enlace, u OBS con <code>/broadcast</code>.</span></div>
   <div id="overlay"></div>
   <h4>Diseños TV propios (sube tu imagen)</h4>
   <div class="kbd">Haz tu banner en Photoshop / Canva (PNG, puede tener transparencia) y súbelo. Luego arrastra cada dato (puntos, nombres, reloj…) a su lugar sobre la imagen.
@@ -869,7 +869,7 @@ addEventListener('keydown', (e) => {
 // ---------- estado ----------
 // ---------- vista del centro: nombres y ficha de jugador (Broadcast Pro en el centro) ----------
 const CV_NAMES = { none: 'Ninguna', leaders: 'Líderes del juego', compare: 'Comparativa de equipos', 'pro-player': 'Ficha de jugador (Pro)',
-  'pro-compare': 'Comparativa Pro', 'pro-leaders': 'Líderes Pro', 'pro-lines': 'Marcador por cuartos (Pro)' };
+  'pro-compare': 'Comparativa Pro', 'pro-leaders': 'Líderes Pro', 'pro-lines': 'Marcador por periodos (Pro)' };
 let cvKey = '', cvInit = false;
 function renderCenterCtl() {
   const set = S.settings;
