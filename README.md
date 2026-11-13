@@ -122,6 +122,13 @@ El borde blanco de 3 px de cada caja está dentro de esas medidas.
 ## Base de datos (SQLite)
 `scoreboard.db` guarda automáticamente: el estado del juego (si se cierra el servidor, al abrir sigue donde iba), el historial de juegos, la jugada a jugada, y las **plantillas de equipos** (botones *Guardar actual / Cargar / Borrar*, o pega una lista `4, G. Torres, PG` por línea (número, nombre y posición opcional) con *Importar*). Para respaldar todo, copia `scoreboard.db`.
 
+## Respaldos
+`scoreboard/respaldo.sh` está instalado en el servidor en `~/respaldos-scoreboard/` y corre con cron todos los días a las 4:15 a. m. (hora de PR). Copia la base de datos sin detener el servicio, junto con los logos y fondos subidos. También respalda el scoreboard de béisbol. Guarda 30 días.
+- Correrlo a mano: `ssh scoreboard '~/respaldos-scoreboard/respaldo.sh'`
+- Ver el registro: `ssh scoreboard 'tail ~/respaldos-scoreboard/respaldo.log'`
+- Bajar una copia a la Mac (por si falla el disco del servidor): `rsync -a scoreboard:respaldos-scoreboard/ ~/Documents/respaldos-scoreboard/`
+- Restaurar: detener el servicio, descomprimir el `.tar.gz` y poner `scoreboard.db` (y `public/logos`, `public/bg`) en la carpeta del proyecto; luego arrancar el servicio.
+
 ## Resumen del juego en PDF
 Botón **Ver PDF del juego actual** en el control, o `http://IP:8080/report.pdf`. Incluye marcador, puntos por periodo, comparativa de equipos, líderes, estadísticas por jugador y jugada a jugada. Los juegos terminados quedan en el **Historial** con su PDF (`/report.pdf?game=1`).
 
