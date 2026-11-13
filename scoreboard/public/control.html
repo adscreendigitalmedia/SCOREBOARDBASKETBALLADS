@@ -53,6 +53,16 @@
   .scr .grid input{width:100%}
   .scr code{font-size:12px;word-break:break-all}
   .warnmsg{color:#ff7b72;font-size:12px}
+  /* juegos programados */
+  #sched{border-color:#1f6feb}
+  .sg{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 10px;border:1px solid #30363d;border-radius:8px;margin:6px 0;background:#0d1117}
+  .sg .when{font-weight:700;color:#ffd400;min-width:150px}
+  .sg .vs{font-size:17px;font-weight:700}
+  .sg .crew{color:#8b949e;font-size:12px}
+  .sg.live{border-color:#2ea043;background:#0f2a17}
+  .sg .badge{font-size:11px;font-weight:700;border-radius:10px;padding:2px 8px;background:#238636;color:#fff;text-transform:uppercase}
+  .sg .act{margin-left:auto}
+  .noassign{background:#2d2a12;border:1px solid #9a6700;color:#ffd400;padding:8px 10px;border-radius:6px}
   /* vista previa en vivo (todos los usuarios) */
   #prev{padding:8px 12px}
   #prev.pin{position:sticky;top:var(--hdr,52px);z-index:4;box-shadow:0 8px 18px rgba(0,0,0,.55)}
@@ -82,6 +92,10 @@
 
 <div class="toast" id="toast"></div>
 <main>
+<section class="wide" id="sched" hidden>
+  <h3>Juego programado</h3>
+  <div id="schedBody"></div>
+</section>
 <section class="wide" id="prev">
   <div class="bar">
     <h3>Vista previa</h3>
@@ -698,6 +712,31 @@ function loop() {
 }
 loop();
 
+// ---------- juego programado: al entrar, cada usuario ve el juego que le asignaron ----------
+let schedCur = null;
+const fmtWhen = (t) => new Date(t).toLocaleString('es-PR', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+async function loadSched() {
+  let r; try { r = await (await fetch('/api/schedule')).json(); } catch (_) { return; }
+  if (!r || !r.list) return;
+  schedCur = S ? S.scheduleId || null : r.current;
+  const live = r.list.find((g) => g.live), next = r.list.filter((g) => g.status === 'programado' && g.ts > Date.now() - 6 * 3600e3).slice(0, 5);
+  const esc2 = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const crew = (g) => `<span class="crew">Mesa: ${g.userNames.length ? esc2(g.userNames.join(', ')) : 'todos'}${g.notes ? ' · ' + esc2(g.notes) : ''}</span>`;
+  let h = '';
+  if (live) h += `<div class="sg live"><span class="badge">${live.status === 'final' ? 'final' : 'en curso'}</span><span class="vs">${esc2(live.home)} vs ${esc2(live.away)}</span>
+    <span class="kbd">programado para ${fmtWhen(live.ts)}</span>${crew(live)}</div>`;
+  else if (r.current) h += '<div class="noassign">Hay un juego programado en curso y <b>no estás asignado</b> a él: puedes mirar, pero no cambiar nada.</div>';
+  const canStart = hasRole('nuevojuego');
+  h += next.map((g) => `<div class="sg"><span class="when">${fmtWhen(g.ts)}</span><span class="vs">${esc2(g.home)} vs ${esc2(g.away)}</span>${crew(g)}
+    <span class="act">${canStart ? `<button class="go" data-sstart="${g.id}" data-sname="${esc2(g.home)} vs ${esc2(g.away)}">Empezar este juego</button>` : '<span class="kbd">Lo empieza quien tenga el permiso <b>Crear juego nuevo</b>.</span>'}</span></div>`).join('');
+  $('#schedBody').innerHTML = h;
+  $('#sched').hidden = !h;
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-sstart]'); if (!b) return;
+  if (confirm(`¿Empezar ${b.dataset.sname}?\n\nEl juego actual queda guardado en el historial y se cargan los equipos con sus jugadores y logos.`)) send({ a: 'scheduleStart', id: +b.dataset.sstart });
+});
+
 // ---------- listas (plantillas guardadas / historial) ----------
 function loadLists() {
   fetch('/api/teams').then((r) => r.json()).then((list) => {
@@ -718,7 +757,7 @@ function loadLists() {
 
 function connect() {
   ws = new WebSocket(`ws://${location.host}`);
-  ws.onopen = () => { $('#dot').classList.add('ok'); $('#status').textContent = 'Conectado'; loadLists(); };
+  ws.onopen = () => { $('#dot').classList.add('ok'); $('#status').textContent = 'Conectado'; loadLists(); loadSched(); };
   ws.onclose = () => { $('#dot').classList.remove('ok'); $('#status').textContent = 'Reconectando…'; setTimeout(connect, 1000); };
   let gt;
   ws.onmessage = (e) => {
@@ -727,9 +766,11 @@ function connect() {
       S = m.s; label = m.label;
       clk = { g: S.game.ms, s: S.shot.ms, gr: S.game.running, sr: S.shot.running, tm: S.timer.ms, tr: S.timer.running, at: performance.now() };
       renderScreens(); renderPreview(); paint();
+      if ((S.scheduleId || null) !== schedCur) loadSched();
       clearTimeout(gt); gt = setTimeout(loadLists, 800);   // el historial cambia con el marcador
     } else if (m.t === 'clock') clk = { g: m.g, s: m.s, gr: m.gr, sr: m.sr, tm: m.tm, tr: m.tr, at: performance.now() };
     else if (m.t === 'lists') loadLists();
+    else if (m.t === 'sched') loadSched();
     else if (m.t === 'err') { toast(m.msg); if (m.login) setTimeout(() => { location.href = '/login.html?next=/control.html'; }, 1500); }
   };
 }

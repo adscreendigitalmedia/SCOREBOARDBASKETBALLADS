@@ -263,6 +263,34 @@ function fillRoster(t, list) {
   t.stats = defaults().teams.home.stats;
 }
 
+// juego nuevo: guarda el actual en el historial (si se jugó algo) y empieza en cero; prep() acomoda equipos antes de abrirlo
+function newGame(prep) {
+  const played = events.length > 0 || S.teams.home.score || S.teams.away.score;
+  if (played) store.updateGame(gameId, { home: S.teams.home.name, away: S.teams.away.name, hs: S.teams.home.score, aw: S.teams.away.score, ended: Date.now(), final: S });
+  if (S.scheduleId) { const l = getSched(), g = l.find((x) => x.id === S.scheduleId); if (g) { g.status = 'terminado'; setSched(l); } }
+  const keep = S.settings; S = defaults(); S.settings = keep; S.game.ms = keep.periodMs; resetTimeouts();
+  if (prep) prep();
+  if (played) gameId = store.newGame({ home: S.teams.home.name, away: S.teams.away.name });
+  else store.updateGame(gameId, { home: S.teams.home.name, away: S.teams.away.name, hs: 0, aw: 0, ended: null, final: null });
+  events = []; undoStack.length = 0;
+}
+
+// ---------- juegos programados (fecha, equipos y usuarios asignados) ----------
+const getSched = () => { const l = store.getKV('schedule'); return Array.isArray(l) ? l : []; };
+const setSched = (l) => { store.setKV('schedule', l); broadcast({ t: 'sched' }); };
+// con un juego programado en curso, solo sus usuarios asignados (y Admin) pueden operar; los demás solo miran
+function assignedOk(user, c) {
+  if (!user || auth.hasRole(user, 'admin')) return true;
+  if (c.a === 'scheduleStart') { const g = getSched().find((x) => x.id === num(c.id)); return !!g && g.users.includes(user.id); }
+  const g = S.scheduleId && getSched().find((x) => x.id === S.scheduleId);
+  return !g || !g.users.length || g.users.includes(user.id);
+}
+function schedView(g) {
+  const live = g.id === S.scheduleId;
+  return { ...g, status: live ? (S.final ? 'final' : 'en curso') : g.status, live,
+    userNames: g.users.map((id) => { const u = store.getUser(id); return u ? u.name || u.username : '(borrado)'; }) };
+}
+
 function run(c) {
   switch (c.a) {
     case 'set': {
@@ -388,15 +416,24 @@ function run(c) {
       persist();
       break;
     }
-    case 'resetGame': {
-      if (events.length > 0 || S.teams.home.score || S.teams.away.score) {
-        store.updateGame(gameId, {
-          home: S.teams.home.name, away: S.teams.away.name, hs: S.teams.home.score, aw: S.teams.away.score, ended: Date.now(), final: S,
-        });
-        const keep = S.settings; S = defaults(); S.settings = keep; S.game.ms = keep.periodMs; resetTimeouts();
-        gameId = store.newGame({ home: S.teams.home.name, away: S.teams.away.name });
-      } else { const keep = S.settings; S = defaults(); S.settings = keep; S.game.ms = keep.periodMs; resetTimeouts(); }
-      events = []; undoStack.length = 0;
+    case 'resetGame': newGame(); break;
+    // empezar un juego programado: guarda el actual, carga los equipos de la plantilla y queda ligado a la programación
+    case 'scheduleStart': {
+      const list = getSched(), g = list.find((x) => x.id === num(c.id));
+      if (!g || g.status === 'terminado' || S.scheduleId === g.id) return false;
+      newGame(() => {
+        for (const [side, tid, nm] of [['home', g.homeId, g.home], ['away', g.awayId, g.away]]) {
+          const t = S.teams[side], r = tid && store.getTeam(tid);
+          if (r) {
+            t.name = r.name; t.short = r.short || ''; t.logo = r.logo || '';
+            t.players = Array.from({ length: 12 }, (_, i) => { const p = r.players[i]; return p ? player(p.n || '', p.name || '', !!p.on, p.pos || '') : player(); });
+          } else { t.name = nm; t.short = nm.slice(0, 3).toUpperCase(); t.logo = ''; t.players = Array.from({ length: 12 }, () => player()); }
+          t.stats = defaults().teams.home.stats;
+        }
+        S.scheduleId = g.id;
+      });
+      const l2 = getSched(), g2 = l2.find((x) => x.id === g.id); g2.status = 'en curso'; g2.gameId = gameId; setSched(l2);
+      log(`Juego programado: ${S.teams.home.name} vs ${S.teams.away.name}`);
       break;
     }
     case 'undo': {
@@ -495,6 +532,7 @@ function onData(sock, chunk) {
           if (!user) send(sock, { t: 'err', msg: 'Tu sesión terminó. Vuelve a entrar.', login: true });
           else if (user.mustChange) send(sock, { t: 'err', msg: 'Primero cambia tu contraseña.' });
           else if (!auth.canRun(user, msg)) send(sock, { t: 'err', msg: 'No tienes permiso para esa acción (' + auth.rolesFor(msg).map((r) => auth.ROLES[r]).join(' / ') + ').' });
+          else if (!assignedOk(user, msg)) send(sock, { t: 'err', msg: 'No estás asignado a este juego: solo puedes mirar.' });
           else if (apply(msg)) { auditCmd(user, msg); broadcastState(); }
         }
       } catch (_) {}
@@ -612,6 +650,42 @@ const server = http.createServer((req, res) => {
   // API para Stream Deck / Companion / Resolume / mesa de control por hardware
   if (url.pathname === '/api/state') return json(res, S);                    // solo lectura, abierta
   if (url.pathname === '/api/teams') return me ? json(res, store.listTeams()) : deny();
+  // juegos programados: el admin los crea; cada usuario ve los suyos (el admin, todos)
+  const sm = url.pathname.match(/^\/api\/schedule(?:\/(\d+))?$/);
+  if (sm) {
+    if (!me) return deny();
+    const admin = auth.hasRole(me, 'admin');
+    if (req.method === 'GET') {
+      const list = getSched().filter((g) => admin || g.users.includes(me.id)).map(schedView).sort((a, b) => a.ts - b.ts);
+      return json(res, { list, current: S.scheduleId || null, me: me.id });
+    }
+    if (!admin) return deny(403, 'Solo un administrador programa juegos');
+    const id = num(sm[1]);
+    if (req.method === 'DELETE') {
+      if (id === S.scheduleId) return deny(400, 'Ese juego está en curso');
+      const l = getSched(); if (!l.some((x) => x.id === id)) return deny(404, 'No encontrado');
+      setSched(l.filter((x) => x.id !== id)); store.audit(me.username, 'borrarProgramado', '#' + id);
+      return json(res, { ok: true });
+    }
+    if (req.method !== 'POST') return deny(405, 'Método no permitido');
+    return readBody(req, (b) => {
+      const ts = num(b.ts);
+      if (!(ts > 0)) return deny(400, 'Falta la fecha y hora');
+      const side = (tid, name) => { const r = num(tid) && store.getTeam(num(tid)); return r ? { id: r.id, name: r.name } : { id: 0, name: String(name || '').trim().slice(0, 40) }; };
+      const H = side(b.homeId, b.home), A = side(b.awayId, b.away);
+      if (!H.name || !A.name) return deny(400, 'Faltan los equipos');
+      const users = [...new Set((Array.isArray(b.users) ? b.users : []).map(num).filter((u) => store.getUser(u)))];
+      const l = getSched();
+      const f = { ts, homeId: H.id, home: H.name, awayId: A.id, away: A.name, users, notes: String(b.notes || '').slice(0, 200) };
+      if (id) {
+        const g = l.find((x) => x.id === id); if (!g) return deny(404, 'No encontrado');
+        Object.assign(g, f);
+      } else l.push({ id: l.reduce((m, x) => Math.max(m, x.id), 0) + 1, status: 'programado', gameId: null, created: Date.now(), by: me.username, ...f });
+      setSched(l.slice(-100));
+      store.audit(me.username, id ? 'editarProgramado' : 'programarJuego', `${H.name} vs ${A.name} ${new Date(ts).toISOString()}`);
+      json(res, { ok: true });
+    });
+  }
   if (url.pathname === '/api/games') return me ? json(res, store.listGames().map((g) => ({ ...g, current: g.id === gameId }))) : deny();
   // historial: corregir o borrar un juego terminado (permiso "Editar juegos del historial")
   const gm = url.pathname.match(/^\/api\/games\/(\d+)$/);
@@ -647,6 +721,7 @@ const server = http.createServer((req, res) => {
     const finish = (cmd) => {
       delete cmd.key;
       if (me && !keyOk && !auth.canRun(me, cmd)) return deny(403, 'No tienes permiso para esa acción');
+      if (me && !keyOk && !assignedOk(me, cmd)) return deny(403, 'No estás asignado a este juego');
       const ok = apply(cmd); if (ok) { auditCmd(keyOk ? null : me, cmd); broadcastState(); }
       json(res, { ok }, ok ? 200 : 400);
     };

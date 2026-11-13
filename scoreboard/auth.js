@@ -46,7 +46,7 @@ const BY_ACTION = {
   jugada: ['possession', 'possessionToggle', 'timeoutStart', 'breakStart', 'timerToggle', 'timerAdjust', 'timerStop', 'final', 'popup', 'popupHide'],
   anotacion: ['playerStat', 'shot', 'undo', 'saveTeam', 'loadTeam', 'importRoster'],
   pantallas: ['screenAdd', 'screenDel', 'screenFit'],
-  nuevojuego: ['resetGame'],
+  nuevojuego: ['resetGame', 'scheduleStart'],
   admin: ['deleteTeam'],
 };
 const ACTION_ROLES = {};

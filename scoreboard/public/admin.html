@@ -69,6 +69,11 @@
   .chip i{color:#8b949e;font-style:normal}
   pre{background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;margin:8px 0 0}
   .edit input{padding:4px 6px}
+  select{background:#0d1117;color:#e6edf3;border:1px solid #444c56;border-radius:6px;padding:7px;font:inherit;width:100%}
+  .sst{font-size:11px;font-weight:700;border-radius:10px;padding:2px 8px;text-transform:uppercase}
+  .sst.programado{background:#1f6feb;color:#fff}.sst.encurso{background:#238636;color:#fff}.sst.final,.sst.terminado{background:#30363d;color:#c9d1d9}
+  .up{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid #21262d}
+  .up b.w{color:#ffd400;min-width:160px}
 </style>
 </head>
 <body>
@@ -84,6 +89,7 @@
   <nav id="nav">
     <a href="#resumen" data-admin><span class="ic">📊</span>Resumen</a>
     <a href="#usuarios" data-admin><span class="ic">👥</span>Usuarios y permisos</a>
+    <a href="#programar" data-admin><span class="ic">📅</span>Programar juegos</a>
     <a href="#juegos"><span class="ic">🏀</span>Juegos</a>
     <a href="#actividad" data-admin><span class="ic">📝</span>Actividad</a>
     <a href="#streamdeck" data-admin><span class="ic">🎛️</span>Stream Deck</a>
@@ -103,6 +109,10 @@
         <div class="gcard" id="gBasket"></div>
         <div class="gcard" id="gBase"></div>
       </div>
+      <section style="margin-top:16px">
+        <h3>Próximos juegos programados</h3>
+        <div id="upNext"></div>
+      </section>
       <section style="margin-top:16px">
         <h3>Conectados ahora (baloncesto)</h3>
         <div class="chips" id="online"></div>
@@ -142,6 +152,30 @@
           <tr><td><b style="color:#ffd400">Crear juego nuevo</b></td><td>Botón <i>Nuevo juego</i>: guarda el actual en el historial y empieza otro en cero.</td></tr>
           <tr><td><b style="color:#ffd400">Editar juegos del historial</b></td><td>Corregir nombres y marcador final de juegos terminados, o borrarlos (sección Juegos de este dashboard).</td></tr>
           <tr><td><b>Admin</b></td><td>Todo lo anterior, más usuarios, reglas de la liga, plantillas de equipos, este dashboard y el registro.</td></tr>
+        </table></div>
+      </section>
+    </div>
+
+    <!-- ================= PROGRAMAR ================= -->
+    <div data-page="programar" hidden>
+      <section>
+        <h3 id="pfTitle">Programar un juego</h3>
+        <p class="help">Elige la fecha, los equipos (de tus plantillas guardadas, así se cargan jugadores y logos) y los usuarios de la mesa. Al entrar, cada usuario asignado ve el juego en su panel; quien tenga <b>Crear juego nuevo</b> lo empieza con un botón. Mientras ese juego está en curso, <b>solo los asignados</b> (y Admin) pueden operar; los demás solo miran. Si no marcas a nadie, puede operar cualquiera con su rol.</p>
+        <form id="pf" class="grid">
+          <div><label>Fecha y hora</label><input type="datetime-local" id="pfWhen" required style="background:#0d1117;color:#e6edf3;border:1px solid #444c56;border-radius:6px;padding:6px;font:inherit;width:100%;color-scheme:dark"></div>
+          <div><label>Local</label><select id="pfHome" class="tsel"></select><input type="text" id="pfHomeTxt" placeholder="Nombre del equipo" hidden style="margin-top:4px"></div>
+          <div><label>Visitante</label><select id="pfAway" class="tsel"></select><input type="text" id="pfAwayTxt" placeholder="Nombre del equipo" hidden style="margin-top:4px"></div>
+          <div style="grid-column:1/-1"><label>Notas (opcional)</label><input type="text" id="pfNotes" placeholder="ej. Cancha 1 · Semifinal"></div>
+          <div style="grid-column:1/-1"><label>Usuarios de la mesa</label><div class="roles" id="pfUsers"></div></div>
+          <div style="grid-column:1/-1;display:flex;gap:8px"><button class="go" id="pfSave">Programar</button><button type="button" id="pfCancel" hidden>Cancelar edición</button></div>
+        </form>
+        <div class="msg" id="pmsg"></div>
+      </section>
+      <section>
+        <h3>Juegos programados</h3>
+        <div class="scroll"><table>
+          <thead><tr><th>Fecha</th><th>Juego</th><th>Mesa</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="sched"></tbody>
         </table></div>
       </section>
     </div>
@@ -218,7 +252,7 @@ function page() {
   document.querySelectorAll('[data-page]').forEach((d) => (d.hidden = d.dataset.page !== p));
   document.querySelectorAll('#nav a').forEach((a) => a.classList.toggle('on', a.getAttribute('href') === '#' + p));
   if (p === 'resumen') loadDash(); if (p === 'juegos') loadGames(); if (p === 'actividad') loadAudit(); if (p === 'respaldos') loadDash();
-  if (p === 'usuarios') loadUsers(); if (p === 'streamdeck') loadKey();
+  if (p === 'usuarios') loadUsers(); if (p === 'streamdeck') loadKey(); if (p === 'programar') loadProgram();
   return p;
 }
 addEventListener('hashchange', page);
@@ -243,6 +277,11 @@ async function loadDash() {
        <div class="meta"><span>H ${G.away.h} - ${G.home.h}</span><span>E ${G.away.e} - ${G.home.e}</span>${G.startedAt ? `<span>Empezó ${when(G.startedAt)}</span>` : ''}</div>
        <div><a class="btn sm" href="${bUrl}/control" target="_blank">Abrir panel</a> <a class="btn sm" href="${bUrl}/display" target="_blank">Ver pantalla</a></div>`
     : `<div class="kbd">El scoreboard de béisbol ${esc(G.why || 'no responde')}.</div>`);
+  api('/api/schedule').then((sc) => {
+    const up = (sc.list || []).filter((g) => g.status !== 'terminado').slice(0, 6);
+    $('#upNext').innerHTML = up.map((g) => `<div class="up"><b class="w">${fmtWhen(g.ts)}</b><b>${esc(g.home)} vs ${esc(g.away)}</b><span class="kbd">Mesa: ${esc(g.userNames.join(', ') || 'todos')}</span>
+      <span class="sst ${g.status.replace(' ', '')}">${stName[g.status] || g.status}</span></div>`).join('') || '<p class="kbd" style="margin:0">No hay juegos programados. <a href="#programar">Programar uno</a></p>';
+  });
   $('#online').innerHTML = d.online.users.map((u) => `<span class="chip">👤 ${esc(u.name)} <i>${esc(u.roles.join(', ') || 'sin roles')}${u.n > 1 ? ' · ' + u.n + ' ventanas' : ''}</i></span>`).join('') +
     `<span class="chip">🖥️ ${d.online.screens} pantalla(s) / vista(s)</span>`;
   // respaldos
@@ -254,6 +293,65 @@ async function loadDash() {
        <p class="kbd">Para guardar una copia en tu Mac: <code>rsync -a scoreboard:respaldos-scoreboard/ ~/Documents/respaldos-scoreboard/</code></p>`;
 }
 setInterval(() => { const p = location.hash.slice(1) || (isAdmin() ? 'resumen' : ''); if (!document.hidden && p === 'resumen') loadDash(); }, 5000);
+
+// ---------- juegos programados ----------
+const fmtWhen = (t) => new Date(t).toLocaleString('es-PR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+const stName = { programado: 'Programado', 'en curso': 'En curso', final: 'Final', terminado: 'Terminado' };
+let SCHED = [], TEAMS = [], USERS = [], pEdit = 0;
+const pad = (n) => String(n).padStart(2, '0');
+const localInput = (t) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+function teamOptions(sel) {
+  return TEAMS.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('') + '<option value="0">Otro (escribir nombre)…</option>';
+}
+async function loadProgram() {
+  const [sc, tm, us] = await Promise.all([api('/api/schedule'), api('/api/teams'), api('/api/users')]);
+  SCHED = sc.list || []; TEAMS = Array.isArray(tm) ? tm : []; USERS = (us.users || []).filter((u) => u.active);
+  if (!$('#pfHome').innerHTML) {
+    $('#pfHome').innerHTML = teamOptions(); $('#pfAway').innerHTML = teamOptions();
+    $('#pfAway').value = TEAMS.length > 1 ? TEAMS[1].id : 0; if (!TEAMS.length) $('#pfHome').value = 0;
+    for (const k of ['Home', 'Away']) { $('#pf' + k).onchange = () => { $(`#pf${k}Txt`).hidden = $('#pf' + k).value !== '0'; }; $('#pf' + k).onchange(); }
+    const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(20, 0, 0, 0); $('#pfWhen').value = localInput(d);   // por defecto: mañana 8:00 p. m.
+  }
+  const keepSel = [...document.querySelectorAll('#pfUsers input:checked')].map((i) => +i.value);
+  $('#pfUsers').innerHTML = USERS.map((u) => `<label><input type="checkbox" value="${u.id}" ${keepSel.includes(u.id) ? 'checked' : ''}> ${esc(u.name || u.username)} <span class="kbd">(${esc(u.roles.map((r) => ROLES[r] || r).join(', ') || 'sin roles')})</span></label>`).join('') || '<span class="kbd">No hay usuarios activos.</span>';
+  $('#sched').innerHTML = SCHED.slice().reverse().map((g) => `<tr data-s="${g.id}"><td>${fmtWhen(g.ts)}</td><td><b>${esc(g.home)}</b> vs <b>${esc(g.away)}</b>${g.notes ? `<div class="kbd">${esc(g.notes)}</div>` : ''}</td>
+    <td class="kbd">${esc(g.userNames.join(', ') || 'todos')}</td><td><span class="sst ${g.status.replace(' ', '')}">${stName[g.status] || g.status}</span></td>
+    <td style="white-space:nowrap">${g.status === 'programado' ? '<button class="sm" data-sdo="edit">Editar</button> <button class="sm stop" data-sdo="del">Borrar</button>' : g.status === 'terminado' ? '<button class="sm stop" data-sdo="del">Borrar</button>' : ''}</td></tr>`).join('')
+    || '<tr><td class="kbd" colspan="5">No hay juegos programados.</td></tr>';
+}
+function pfReset() {
+  pEdit = 0; $('#pfTitle').textContent = 'Programar un juego'; $('#pfSave').textContent = 'Programar'; $('#pfCancel').hidden = true;
+  $('#pfNotes').value = ''; document.querySelectorAll('#pfUsers input').forEach((i) => (i.checked = false));
+}
+$('#pfCancel').onclick = pfReset;
+$('#pf').onsubmit = async (e) => {
+  e.preventDefault();
+  const side = (k) => ({ id: +$('#pf' + k).value, name: $(`#pf${k}Txt`).value.trim() });
+  const H = side('Home'), A = side('Away');
+  const body = { ts: new Date($('#pfWhen').value).getTime(), homeId: H.id, home: H.name, awayId: A.id, away: A.name, notes: $('#pfNotes').value,
+    users: [...document.querySelectorAll('#pfUsers input:checked')].map((i) => +i.value) };
+  if (H.id && H.id === A.id) return say($('#pmsg'), 'Elige dos equipos distintos');
+  const r = await api('/api/schedule' + (pEdit ? '/' + pEdit : ''), 'POST', body);
+  if (!r.ok) return say($('#pmsg'), r.error || 'No se pudo');
+  say($('#pmsg'), pEdit ? 'Juego actualizado' : 'Juego programado. Los usuarios asignados lo verán en su panel al entrar.', true);
+  pfReset(); loadProgram();
+};
+$('#sched').onclick = async (e) => {
+  const b = e.target.closest('button[data-sdo]'); if (!b) return;
+  const id = +b.closest('tr').dataset.s, g = SCHED.find((x) => x.id === id);
+  if (b.dataset.sdo === 'del') {
+    if (!confirm(`¿Borrar el juego programado ${g.home} vs ${g.away}?`)) return;
+    const r = await api('/api/schedule/' + id, 'DELETE'); if (!r.ok) return say($('#pmsg'), r.error || 'No se pudo');
+    return loadProgram();
+  }
+  pEdit = id; $('#pfTitle').textContent = `Editar juego programado`; $('#pfSave').textContent = 'Guardar cambios'; $('#pfCancel').hidden = false;
+  $('#pfWhen').value = localInput(g.ts); $('#pfNotes').value = g.notes || '';
+  for (const [k, tid, nm] of [['Home', g.homeId, g.home], ['Away', g.awayId, g.away]]) {
+    $('#pf' + k).value = TEAMS.some((t) => t.id === tid) ? tid : 0; $(`#pf${k}Txt`).value = TEAMS.some((t) => t.id === tid) ? '' : nm; $('#pf' + k).onchange();
+  }
+  document.querySelectorAll('#pfUsers input').forEach((i) => (i.checked = g.users.includes(+i.value)));
+  scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 // ---------- usuarios ----------
 async function loadUsers() {
