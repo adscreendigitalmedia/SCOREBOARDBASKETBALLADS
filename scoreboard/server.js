@@ -633,7 +633,7 @@ const server = http.createServer((req, res) => {
       if (!auth.checkPassword(b.old, me.pass)) return deny(400, 'La contraseña actual no es correcta');
       if (String(b.new || '').length < 6) return deny(400, 'La nueva contraseña debe tener al menos 6 caracteres');
       store.setPassword(me.id, auth.hashPassword(b.new), false); store.audit(me.username, 'cambioContraseña', '');
-      json(res, { ok: true });
+      json(res, { ok: true, user: auth.publicUser(me) });
     });
   }
 
@@ -691,6 +691,7 @@ const server = http.createServer((req, res) => {
   if (PROTECTED_PAGES.includes(url.pathname) || url.pathname === '/') {
     if (!me) { res.writeHead(302, { Location: '/login.html?next=' + encodeURIComponent(url.pathname === '/' ? '/control.html' : url.pathname + url.search) }); return res.end(); }
     if (me.mustChange) { res.writeHead(302, { Location: '/login.html?change=1' }); return res.end(); }
+    if (url.pathname === '/' && auth.hasRole(me, 'admin')) { res.writeHead(302, { Location: '/admin.html' }); return res.end(); }   // inicio del admin: el dashboard
     if (url.pathname === '/admin.html' && !auth.hasRole(me, 'admin') && !auth.hasRole(me, 'historial')) { res.writeHead(302, { Location: '/control.html' }); return res.end(); }
   }
   if (me && me.mustChange) me = null;              // con contraseña temporal solo puede cambiarla; nada más

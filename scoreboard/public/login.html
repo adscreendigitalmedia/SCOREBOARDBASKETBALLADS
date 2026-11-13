@@ -45,6 +45,8 @@ const $ = (s) => document.querySelector(s);
 const qs = new URLSearchParams(location.search);
 // solo rutas internas (evita redirigir a otro sitio)
 const next = /^\/[^/\\]/.test(qs.get('next') || '') ? qs.get('next') : '/control.html';
+// al entrar: el admin va directo a Inicio (dashboard); los demás, a donde iban (el panel)
+const home = (u) => (u && u.roles.includes('admin') ? '/admin.html' : next);
 const msg = (t, ok) => { $('#msg').textContent = t; $('#msg').classList.toggle('ok', !!ok); };
 const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   .then(async (r) => ({ ok: r.ok, ...(await r.json().catch(() => ({}))) }));
@@ -59,7 +61,7 @@ $('#login').onsubmit = async (e) => {
   const r = await post('/api/login', { username: $('#u').value, password: $('#p').value });
   if (!r.ok) return msg(r.error || 'No se pudo entrar');
   if (r.user.mustChange) return showChange($('#p').value);
-  location.href = next;
+  location.href = home(r.user);
 };
 
 $('#change').onsubmit = async (e) => {
@@ -69,7 +71,7 @@ $('#change').onsubmit = async (e) => {
   const r = await post('/api/password', { old: $('#o').value, new: $('#n1').value });
   if (!r.ok) return msg(r.error || 'No se pudo cambiar');
   msg('Contraseña cambiada', true);
-  setTimeout(() => { location.href = next; }, 600);
+  setTimeout(() => { location.href = qs.get('next') ? next : home(r.user); }, 600);
 };
 
 // ?change=1 → ya hay sesión pero debe cambiar la contraseña (o la quiere cambiar desde el panel)
