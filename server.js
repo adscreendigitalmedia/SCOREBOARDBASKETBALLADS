@@ -605,14 +605,41 @@ const server = http.createServer((req, res) => {
   if (PROTECTED_PAGES.includes(url.pathname) || url.pathname === '/') {
     if (!me) { res.writeHead(302, { Location: '/login.html?next=' + encodeURIComponent(url.pathname === '/' ? '/control.html' : url.pathname + url.search) }); return res.end(); }
     if (me.mustChange) { res.writeHead(302, { Location: '/login.html?change=1' }); return res.end(); }
-    if (url.pathname === '/admin.html' && !auth.hasRole(me, 'admin')) { res.writeHead(302, { Location: '/control.html' }); return res.end(); }
+    if (url.pathname === '/admin.html' && !auth.hasRole(me, 'admin') && !auth.hasRole(me, 'historial')) { res.writeHead(302, { Location: '/control.html' }); return res.end(); }
   }
   if (me && me.mustChange) me = null;              // con contraseña temporal solo puede cambiarla; nada más
 
   // API para Stream Deck / Companion / Resolume / mesa de control por hardware
   if (url.pathname === '/api/state') return json(res, S);                    // solo lectura, abierta
   if (url.pathname === '/api/teams') return me ? json(res, store.listTeams()) : deny();
-  if (url.pathname === '/api/games') return me ? json(res, store.listGames()) : deny();
+  if (url.pathname === '/api/games') return me ? json(res, store.listGames().map((g) => ({ ...g, current: g.id === gameId }))) : deny();
+  // historial: corregir o borrar un juego terminado (permiso "Editar juegos del historial")
+  const gm = url.pathname.match(/^\/api\/games\/(\d+)$/);
+  if (gm) {
+    if (!me) return deny();
+    if (!auth.hasRole(me, 'historial')) return deny(403, 'No tienes permiso para editar el historial');
+    const id = num(gm[1]);
+    if (id === gameId) return deny(400, 'Ese es el juego en curso: se cambia desde el panel de control');
+    if (req.method === 'DELETE') {
+      if (!store.deleteGame(id)) return deny(404, 'Juego no encontrado');
+      store.audit(me.username, 'borrarJuego', '#' + id); broadcast({ t: 'lists' });
+      return json(res, { ok: true });
+    }
+    if (req.method !== 'POST') return deny(405, 'Método no permitido');
+    return readBody(req, (b) => {
+      const f = { home: String(b.home || '').trim().slice(0, 40), away: String(b.away || '').trim().slice(0, 40), hs: Math.max(0, Math.min(999, num(b.hs))), aw: Math.max(0, Math.min(999, num(b.aw))) };
+      if (!f.home || !f.away) return deny(400, 'Faltan los nombres de los equipos');
+      if (!store.editGame(id, f)) return deny(404, 'Juego no encontrado');
+      store.audit(me.username, 'editarJuego', `#${id} ${f.home} ${f.hs} - ${f.aw} ${f.away}`); broadcast({ t: 'lists' });
+      json(res, { ok: true });
+    });
+  }
+  // dashboard del administrador: juegos activos (baloncesto y béisbol), quién está conectado, respaldos
+  if (url.pathname === '/api/dashboard') {
+    if (!me) return deny();
+    if (!auth.hasRole(me, 'admin')) return deny(403, 'Solo un administrador');
+    return dashboard().then((d) => json(res, d), (e) => json(res, { error: e.message }, 500));
+  }
   if (url.pathname === '/api/cmd') {
     // con sesión (rol revisado) o con la clave de Stream Deck: /api/cmd?key=...&a=gameToggle
     const keyOk = url.searchParams.get('key') && url.searchParams.get('key') === store.getKV('apiKey');
@@ -696,6 +723,53 @@ server.on('upgrade', (req, sock) => {
   sock.on('error', () => clients.delete(sock));
   send(sock, stateMsg());
 });
+
+// ---------- dashboard ----------
+const BASEBALL_WS = process.env.BASEBALL_WS || 'ws://127.0.0.1:3001/ws';   // scoreboard de béisbol en el mismo servidor
+const BASEBALL_PORT = (BASEBALL_WS.match(/:(\d+)\//) || [])[1] || '3001';
+// lee el estado del béisbol como lo hace su pantalla (solo lectura) y cierra
+function baseballStatus() {
+  return new Promise((resolve) => {
+    if (typeof WebSocket === 'undefined') return resolve({ ok: false, why: 'Node sin WebSocket' });
+    let done = false, ws;
+    const end = (v) => { if (done) return; done = true; clearTimeout(t); try { ws && ws.close(); } catch (_) {} resolve(v); };
+    const t = setTimeout(() => end({ ok: false, why: 'no responde' }), 2000);
+    try { ws = new WebSocket(BASEBALL_WS); } catch (e) { return end({ ok: false, why: e.message }); }
+    ws.onerror = () => end({ ok: false, why: 'no está corriendo' });
+    ws.onmessage = (e) => {
+      let m; try { m = JSON.parse(e.data); } catch (_) { return; }
+      if (m.t !== 'state' || !m.game) return;
+      const g = m.game, runs = (x) => (x.runs || []).reduce((a, b) => a + (Number(b) || 0), 0);
+      const started = (g.away.runs || []).length > 0 || (g.home.runs || []).length > 0 || g.inning > 1 || g.outs > 0 || g.balls > 0 || g.strikes > 0;
+      end({ ok: true, away: { name: g.away.name, score: runs(g.away), h: g.away.h, e: g.away.e }, home: { name: g.home.name, score: runs(g.home), h: g.home.h, e: g.home.e },
+        inning: g.inning, half: g.half, outs: g.outs, balls: g.balls, strikes: g.strikes, final: !!g.final, started, startedAt: g.startedAt || null, port: BASEBALL_PORT });
+    };
+  });
+}
+function backupsInfo() {
+  const dir = path.join(os.homedir(), 'respaldos-scoreboard');
+  try {
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.tar.gz')).map((f) => { const st = fs.statSync(path.join(dir, f)); return { name: f, ts: st.mtimeMs, size: st.size }; })
+      .sort((a, b) => b.ts - a.ts);
+    let log = ''; try { log = fs.readFileSync(path.join(dir, 'respaldo.log'), 'utf8').trim().split('\n').slice(-6).join('\n'); } catch (_) {}
+    return { ok: true, dir, count: files.length, last: files.slice(0, 6), log };
+  } catch (_) { return { ok: false, dir }; }
+}
+async function dashboard() {
+  // conectados: pantallas (sin sesión) y usuarios con sesión
+  let screens = 0; const users = new Map();
+  for (const s of clients) {
+    const u = s.token ? userFromToken(s.token) : null;
+    if (u) users.set(u.id, { name: u.name || u.username, username: u.username, roles: u.roles, n: (users.get(u.id)?.n || 0) + 1 }); else screens++;
+  }
+  const T = S.teams, started = !S.final && (events.length > 0 || T.home.score > 0 || T.away.score > 0 || S.game.running);
+  const basket = { ok: true, id: gameId, home: { name: T.home.name, score: T.home.score, fouls: T.home.fouls, logo: T.home.logo }, away: { name: T.away.name, score: T.away.score, fouls: T.away.fouls, logo: T.away.logo },
+    period: periodLabel(S.period), clockMs: S.game.ms, running: S.game.running, final: !!S.final, started, plays: events.length, screens: S.settings.screens.length };
+  const baseball = await baseballStatus();
+  const active = [basket, baseball].filter((g) => g.ok && g.started && !g.final).length;
+  return { now: Date.now(), active, basket, baseball, online: { screens, users: [...users.values()] }, backups: backupsInfo(),
+    totals: { users: store.listUsers().length, games: store.listGames().length } };
+}
 
 // ---------- Relojes (el servidor es la única fuente de tiempo) ----------
 let lastTick = Date.now(); let lastClock = 0;

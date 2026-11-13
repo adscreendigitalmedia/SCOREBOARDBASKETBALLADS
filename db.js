@@ -81,6 +81,17 @@ function sqliteStore(db) {
       return r ? { ...r, players: JSON.parse(r.players || '[]') } : null;
     },
     deleteTeam(id) { q('DELETE FROM teams WHERE id=?').run(id); },
+    // historial: corregir nombres / marcador final, o borrar un juego terminado
+    editGame(id, f) {
+      const g = this.getGame(id); if (!g) return false;
+      if (g.final) { g.final.teams.home.name = f.home; g.final.teams.away.name = f.away; g.final.teams.home.score = f.hs; g.final.teams.away.score = f.aw; }
+      q('UPDATE games SET home=?, away=?, hs=?, aw=?, final=? WHERE id=?').run(f.home, f.away, f.hs, f.aw, g.final ? JSON.stringify(g.final) : null, id);
+      return true;
+    },
+    deleteGame(id) {
+      q('DELETE FROM events WHERE game_id=?').run(id); q('DELETE FROM snapshots WHERE game_id=?').run(id);
+      return q('DELETE FROM games WHERE id=?').run(id).changes > 0;
+    },
     // ---- usuarios / sesiones / registro de actividad ----
     countUsers() { return q('SELECT COUNT(*) AS n FROM users').get().n; },
     listUsers() { return q('SELECT * FROM users ORDER BY username').all().map(userRow); },
@@ -146,6 +157,17 @@ function jsonStore() {
     listTeams() { return d.teams.map(({ id, name, short }) => ({ id, name, short })).sort((a, b) => a.name.localeCompare(b.name)); },
     getTeam(id) { return d.teams.find((x) => x.id === id) || null; },
     deleteTeam(id) { d.teams = d.teams.filter((x) => x.id !== id); persist(); },
+    editGame(id, f) {
+      const g = d.games.find((x) => x.id === id); if (!g) return false;
+      Object.assign(g, { home: f.home, away: f.away, hs: f.hs, aw: f.aw });
+      if (g.final) { g.final.teams.home.name = f.home; g.final.teams.away.name = f.away; g.final.teams.home.score = f.hs; g.final.teams.away.score = f.aw; }
+      persist(); return true;
+    },
+    deleteGame(id) {
+      const n = d.games.length;
+      d.games = d.games.filter((x) => x.id !== id); d.events = d.events.filter((e) => e.game_id !== id); delete d.snapshots[id];
+      persist(); return d.games.length < n;
+    },
     // ---- usuarios / sesiones / registro de actividad ----
     countUsers() { return d.users.length; },
     listUsers() { return d.users.slice().sort((a, b) => a.username.localeCompare(b.username)).map((u) => ({ ...u })); },

@@ -76,7 +76,7 @@
   <span class="dot" id="dot"></span><span id="status">Conectando…</span>
   <span class="kbd">Pantalla: <code id="durl"></code></span>
   <nav class="roles" id="roles"></nav>
-  <span class="who"><b id="uname"></b><a href="/admin.html" id="adminlink" hidden>Usuarios</a><a href="/login.html?change=1&next=/control.html">Contraseña</a><a href="#" id="logout">Salir</a></span>
+  <span class="who"><b id="uname"></b><a href="/admin.html" id="adminlink" hidden>Dashboard</a><a href="/login.html?change=1&next=/control.html">Contraseña</a><a href="#" id="logout">Salir</a></span>
   <div class="clocks"><b class="tm" id="ct"></b><span id="plabel"></span><b id="cg">10:00</b><b class="sh" id="cs">24</b></div>
 </header>
 
@@ -190,6 +190,12 @@
 <section class="wide" id="r-home" data-rol="anotacion"></section>
 <section class="wide" id="r-away" data-rol="anotacion"></section>
 
+<section class="wide" data-rol="nuevojuego">
+  <h3>Juego nuevo</h3>
+  <div class="row"><button class="stop" id="reset">Nuevo juego (reiniciar todo)</button>
+    <span class="kbd">El juego actual queda guardado en el historial. Solo usuarios con el permiso <b>Crear juego nuevo</b>.</span></div>
+</section>
+
 <section class="wide" data-rol="admin">
   <h3>Plantillas de equipos (base de datos)</h3>
   <div class="row" style="align-items:flex-start">
@@ -231,7 +237,6 @@
     <label style="margin:0 0 0 14px"><input type="checkbox" data-path="settings.sortByPts" data-type="bool"> Jugadores en pantalla de mayor a menor puntos</label>
     <label style="margin:0 0 0 14px"><input type="checkbox" data-path="settings.otFoulsCarry" data-type="bool"> En tiempo extra seguir las faltas del 4to (FIBA)</label>
     <label style="margin:0 0 0 14px">Apagar 24 con menos de <input class="num" type="number" data-path="settings.shotOffMs" data-type="sec" style="width:56px"> s de juego</label>
-    <button class="stop" id="reset" style="margin-left:auto">Nuevo juego (reiniciar todo)</button>
   </div>
 </section>
 
@@ -287,7 +292,7 @@ let clk = { g: 0, s: 0, gr: false, sr: false, tm: 0, tr: false, at: performance.
 // ---------- usuario y roles: cada quien ve solo lo de sus roles (el servidor también lo revisa) ----------
 // control.html?rol=relojes | anotacion | jugada | pantallas | admin  filtra la vista a uno solo de tus roles
 let ME = null, ROL = 'todo';
-const ROLE_NAMES = { relojes: 'Relojes', anotacion: 'Anotación', jugada: 'Jugada', pantallas: 'Pantallas', admin: 'Ajustes' };
+const ROLE_NAMES = { relojes: 'Relojes', anotacion: 'Anotación', jugada: 'Jugada', pantallas: 'Pantallas', nuevojuego: 'Juego nuevo', admin: 'Ajustes' };
 const isAdmin = () => !!ME && ME.roles.includes('admin');
 const hasRole = (r) => isAdmin() || (!!ME && ME.roles.includes(r));
 function toast(text, ok) {
@@ -305,7 +310,7 @@ function applyRoles() {
     s.hidden = !hasRole(s.dataset.rol) || (ROL !== 'todo' && s.dataset.rol !== ROL);
   });
   $('#uname').textContent = ME.name || ME.username;
-  $('#adminlink').hidden = !isAdmin();
+  $('#adminlink').hidden = !hasRole('historial');      // admin, o quien edita el historial
   document.title = 'Scoreboard - ' + (ROL === 'todo' ? (ME.name || ME.username) : ROLE_NAMES[ROL]);
 }
 // ---------- vista previa en vivo: para todos los usuarios; cada quien recuerda su elección en su navegador ----------

@@ -7,8 +7,11 @@ const ROLES = {
   anotacion: 'Anotación',
   jugada: 'Jugada',
   pantallas: 'Pantallas',
+  nuevojuego: 'Crear juego nuevo',        // permisos de juegos: nadie los tiene hasta que el admin los da
+  historial: 'Editar juegos del historial',
   admin: 'Admin',
 };
+const GAME_PERMS = ['nuevojuego', 'historial'];
 const SESSION_DAYS = 14;
 const COOKIE = 'sb_sess';
 
@@ -43,7 +46,8 @@ const BY_ACTION = {
   jugada: ['possession', 'possessionToggle', 'timeoutStart', 'breakStart', 'timerToggle', 'timerAdjust', 'timerStop', 'final', 'popup', 'popupHide'],
   anotacion: ['playerStat', 'shot', 'undo', 'saveTeam', 'loadTeam', 'importRoster'],
   pantallas: ['screenAdd', 'screenDel', 'screenFit'],
-  admin: ['resetGame', 'deleteTeam'],
+  nuevojuego: ['resetGame'],
+  admin: ['deleteTeam'],
 };
 const ACTION_ROLES = {};
 for (const [role, list] of Object.entries(BY_ACTION)) for (const a of list) ACTION_ROLES[a] = [role];
@@ -71,4 +75,4 @@ const canRun = (u, c) => !!u && rolesFor(c).some((r) => hasRole(u, r));
 const publicUser = (u) => u && { id: u.id, username: u.username, name: u.name, roles: u.roles, active: u.active, mustChange: u.mustChange, created: u.created, lastLogin: u.lastLogin };
 const cleanRoles = (list) => [...new Set((Array.isArray(list) ? list : []).filter((r) => r in ROLES))];
 
-module.exports = { ROLES, SESSION_DAYS, COOKIE, hashPassword, checkPassword, newToken, readCookie, sessionCookie, rolesFor, hasRole, canRun, publicUser, cleanRoles };
+module.exports = { GAME_PERMS, ROLES, SESSION_DAYS, COOKIE, hashPassword, checkPassword, newToken, readCookie, sessionCookie, rolesFor, hasRole, canRun, publicUser, cleanRoles };

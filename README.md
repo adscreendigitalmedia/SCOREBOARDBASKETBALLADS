@@ -52,7 +52,7 @@ Si la otra PC no conecta: abre el puerto 8080 en el firewall de Windows y verifi
 
 ## Usuarios y roles
 El panel pide **usuario y contraseña**. La primera vez entra con `admin` / `admin`; se te pide cambiarla de inmediato.
-En **Usuarios** (`/admin.html`, solo Admin) creas una cuenta para cada persona y marcas sus roles. Un usuario puede tener varios roles; cada quien ve solo sus secciones y el **servidor rechaza** cualquier acción fuera de sus roles.
+En el **Dashboard** (`/admin.html`, enlace *Dashboard* en el panel) creas una cuenta para cada persona y marcas sus roles y permisos. Una cuenta nueva **empieza sin roles ni permisos**: solo puede mirar hasta que le des algo. Un usuario puede tener varios roles; cada quien ve solo sus secciones y el **servidor rechaza** cualquier acción fuera de sus roles.
 
 | Rol | Qué maneja |
 |---|---|
@@ -60,11 +60,14 @@ En **Usuarios** (`/admin.html`, solo Admin) creas una cuenta para cada persona y
 | Anotación | marcador, faltas, estadísticas, jugadores en cancha, logos y nombres, plantillas, deshacer (`Z`) |
 | Jugada | posesión (`P`), tiempos fuera y su duración, descansos, FINAL, vista del centro |
 | Pantallas | título, centro de la pantalla, fondo / plantilla, colores de Líderes y Comparativa |
-| Admin | todo, más usuarios, reglas de la liga, juego nuevo, borrar plantillas y registro de actividad |
+| *Permiso* Crear juego nuevo | botón **Nuevo juego** (guarda el actual en el historial y empieza otro) |
+| *Permiso* Editar juegos del historial | corregir nombres y marcador final de juegos terminados, o borrarlos (Dashboard → Juegos) |
+| Admin | todo, más usuarios, reglas de la liga, plantillas de equipos, dashboard y registro de actividad |
 
 - Las cuentas nuevas reciben una **contraseña temporal** y deben cambiarla al entrar. Siempre queda al menos un administrador activo.
 - Al **desactivar** un usuario, su sesión abierta deja de funcionar al instante.
-- El **registro de actividad** (en Usuarios) guarda quién hizo cada acción y a qué hora.
+- **Dashboard** con menú: *Resumen* (cuántos juegos hay en curso ahora, el de baloncesto y el de béisbol con su marcador y estado, quién está conectado y cuántas pantallas), *Usuarios y permisos*, *Juegos* (historial), *Actividad*, *Stream Deck* y *Respaldos*. El béisbol se lee de `ws://127.0.0.1:3001/ws`; si corre en otro puerto, arranca el servidor con `BASEBALL_WS=ws://127.0.0.1:PUERTO/ws`.
+- El **registro de actividad** (Dashboard → Actividad) guarda quién hizo cada acción y a qué hora.
 - Con varios roles, `?rol=relojes` (etc.) filtra la vista a uno solo.
 - `display.html` y `popup.html` **no** piden contraseña: son solo de lectura, para OBS.
 - Contraseña de admin olvidada: con el servidor apagado, en la carpeta `scoreboard` corre
