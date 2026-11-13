@@ -193,6 +193,7 @@
   .pf-gs span { display: block; font-weight: 800; font-size: 20px; letter-spacing: .12em; color: var(--clabel); }
   .pf-gs b { font-weight: 800; font-size: 60px; line-height: 1.05; }
   .pf-gs .warn b { color: #ff5a5a; }
+  .pf-cap { position: relative; padding: 0 18px 6px; font-weight: 800; font-size: 20px; letter-spacing: .16em; color: var(--accent); }
   .pf-slots { position: relative; display: grid; grid-template-columns: repeat(var(--n, 4), 1fr); gap: 8px; padding: 0 16px 16px; }
   .pf-slot { background: rgba(255,255,255,.1); display: grid; justify-items: center; padding: 8px 0 10px; gap: 2px; }
   .pf-slot span { font-weight: 700; font-size: 20px; letter-spacing: .12em; color: var(--clabel); }
@@ -349,7 +350,7 @@ const teamsRow = (mid) => {
   return `<div class="teamsRow"><div class="h">${H.logo ? `<img src="${esc(H.logo)}" alt="">` : ''}<span data-v="hn"></span></div><div class="mid">${mid}</div><div class="a"><span data-v="an"></span>${A.logo ? `<img src="${esc(A.logo)}" alt="">` : ''}</div></div>`;
 };
 // cada gráfico: build() arma la estructura (una vez), vals() da los valores que se actualizan en su lugar
-const nPer = () => Math.max(4, S.period, S.periodScores.home.length, S.periodScores.away.length);
+const nPer = () => Math.max(4, S.period);                      // 4 cuartos; cada tiempo extra agrega uno
 const GFX = {
   compare: {
     key: () => S.teams.home.logo + S.teams.away.logo,
@@ -422,6 +423,7 @@ const GFX = {
             <div class="pf-facts"><div class="pf-grp"><div class="gl">EN EL JUEGO</div><div class="pf-gs">${[['PTS', 'pts'], ['REB', 'reb'], ['AST', 'ast'], ['FALTAS', 'pf']].map(([l, k]) => `<div data-c="${k}"><span>${l}</span><b data-v="${k}"></b></div>`).join('')}</div></div>
               <div class="pf-grp"><div class="gl">DEL EQUIPO</div><div class="pf-gs"><div><span>% PUNTOS</span><b data-v="share"></b></div></div></div></div>
           </div></div>
+          <div class="pf-cap">PUNTOS POR CUARTO</div>
           <div class="pf-slots" style="--n:${n}">${Array.from({ length: n }, (_, j) => `<div class="pf-slot" data-s="${j}"><span>${lab(j)}</span><b data-v="q${j}"></b></div>`).join('')}</div></div>`;
       }
       return `<div class="no" style="--c:var(--${lv.team})"><small>NÚMERO</small><b data-v="n"></b></div><div class="acc"></div>
@@ -437,8 +439,8 @@ const GFX = {
         const parts = String(p.name || 'Jugador').trim().split(/\s+/), first = parts.length > 1 ? parts[0] : '', last = parts.length > 1 ? parts.slice(1).join(' ') : parts[0];
         Object.assign(V, { n2: p.n || '', first, last, head: 'Jugador · ' + t.name, posl: p.pos ? 'Posición ' + p.pos : '',
           share: t.score ? Math.round((p.pts || 0) / t.score * 100) + '%' : '0%' });
-        const sc = S.periodScores[lv.team] || [];
-        for (let j = 0; j < nPer(); j++) V['q' + j] = j < S.period ? (sc[j] ?? 0) : '–';
+        const pq = Array.isArray(p.pq) ? p.pq : [];              // puntos de ESTE jugador en cada periodo
+        for (let j = 0; j < nPer(); j++) V['q' + j] = j < S.period ? (pq[j] || 0) : '–';
         extra.slots = true; extra.long = last.length > 10;
       }
       return { V, W: {}, L: {}, warn: { pf: (p.pf || 0) >= (S.settings.foulOut || 5) - 1 }, ...extra };

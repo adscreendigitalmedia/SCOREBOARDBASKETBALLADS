@@ -41,7 +41,7 @@ function auditCmd(user, c) {
 }
 
 // ---------- Estado ----------
-const player = (n = '', name = '', on = false, pos = '') => ({ n, name, pos, pts: 0, reb: 0, ast: 0, pf: 0, on });
+const player = (n = '', name = '', on = false, pos = '') => ({ n, name, pos, pts: 0, reb: 0, ast: 0, pf: 0, on, pq: [] });   // pq = puntos por periodo
 const POS = ['PG', 'SG', 'SF', 'PF', 'C'];   // posiciones de ejemplo para los 5 iniciales
 const roster = (names) =>
   Array.from({ length: 12 }, (_, i) => (names[i] ? player(String(i + 4), names[i], true, POS[i] || '') : player()));
@@ -279,6 +279,14 @@ function ensurePeriods() {
     while (a.length < S.period) a.push(0);
   }
 }
+// puntos del jugador por periodo: se suman al periodo en curso; una corrección (negativa) descuenta del periodo en curso
+// y, si ahí no hay, del periodo anterior más cercano que tenga puntos
+function playerPeriodPts(p, d) {
+  if (!Array.isArray(p.pq)) p.pq = [];
+  let i = S.period - 1;
+  if (d > 0) { p.pq[i] = (p.pq[i] || 0) + d; return; }
+  for (let left = -d; i >= 0 && left > 0; i--) { const take = Math.min(left, p.pq[i] || 0); p.pq[i] = (p.pq[i] || 0) - take; left -= take; }
+}
 function addPeriodPts(k, d) {
   ensurePeriods();
   const a = S.periodScores[k]; const i = S.period - 1;
@@ -432,7 +440,7 @@ function run(c) {
       const before = p[c.stat];
       p[c.stat] = clamp0(before + num(c.by));
       const dd = p[c.stat] - before;
-      if (c.stat === 'pts') t.score = clamp0(t.score + dd);
+      if (c.stat === 'pts') { t.score = clamp0(t.score + dd); playerPeriodPts(p, dd); }
       if (c.stat === 'pf') t.fouls = clamp0(t.fouls + dd);
       const who = `${p.name || '#' + p.n} (${abbr(c.team)})`;
       const lab = { pts: 'puntos', reb: 'rebote', ast: 'asistencia', pf: 'falta' }[c.stat];
