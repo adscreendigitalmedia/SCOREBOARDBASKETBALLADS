@@ -313,6 +313,7 @@
     <label style="margin:0">Etiquetas <input type="color" data-path="settings.viewLabel"></label>
     <label style="margin:0">Valor que gana <input type="color" data-path="settings.viewLead"></label>
     <label style="margin:0">Texto <input type="color" data-path="settings.viewText"></label>
+    <label style="margin:0" title="Toma el color de tu imagen de fondo detrás de las tablas y lo usa para el fondo y las franjas (sin degradado)"><input type="checkbox" data-path="settings.viewMatch" data-type="bool"> Mismo color del fondo (automático)</label>
     <label style="margin:0"><input type="checkbox" data-path="settings.viewClear" data-type="bool"> Sin fondos (se ve mi plantilla)</label>
     <button class="sm" id="vreset">Colores originales</button>
   </div>
@@ -786,7 +787,7 @@ document.addEventListener('change', (e) => {
   send({ a: 'set', path: p, value: v });
 });
 // colores originales de Líderes / Comparativa
-const VIEW_DEFAULTS = { viewBg: '#050a24', viewHead: '#0a2fb8', viewTeams: '#0a2fb8', viewLine: '#1b4bff', viewLabel: '#9db4ff', viewLead: '#ffd400', viewText: '#ffffff', viewClear: false };
+const VIEW_DEFAULTS = { viewBg: '#050a24', viewHead: '#0a2fb8', viewTeams: '#0a2fb8', viewLine: '#1b4bff', viewLabel: '#9db4ff', viewLead: '#ffd400', viewText: '#ffffff', viewClear: false, viewMatch: false };
 document.getElementById('vreset').addEventListener('click', () => {
   for (const [k, v] of Object.entries(VIEW_DEFAULTS)) send({ a: 'set', path: 'settings.' + k, value: v });
 });

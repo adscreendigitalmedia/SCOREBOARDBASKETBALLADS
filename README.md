@@ -47,7 +47,7 @@ Si la otra PC no conecta: abre el puerto 8080 en el firewall de Windows y verifi
 - **Orden de jugadores:** en la pantalla los 5 en cancha se ordenan de mayor a menor puntos (con igual puntaje, el orden de la plantilla). Un jugador que entra por sustitución queda según sus puntos, no abajo. Se apaga en Ajustes.
 - **Marcador por periodo** (Q1, Q2, Q3, Q4, OT) bajo cada marcador.
 - **Deshacer** (`Z`): revierte la última acción de marcador, faltas o estadísticas. No toca relojes, posesión, periodo ni tiempos fuera, para que varios operadores no se pisen.
-- **Vistas del centro:** líderes del juego y comparativa de equipos.
+- **Vistas del centro:** líderes del juego y comparativa de equipos. Sus colores se cambian en *Colores de Líderes / Comparativa*; con **Mismo color del fondo (automático)** el fondo y las franjas toman el color de tu imagen de fondo detrás del centro (colores planos, sin degradado) y se actualizan solos si cambias la imagen.
 - **FINAL:** marca el juego como terminado y lo guarda.
 
 ## Usuarios y roles

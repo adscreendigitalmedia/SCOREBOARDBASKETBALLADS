@@ -116,6 +116,9 @@
   /* sin fondos: se ve la plantilla de fondo debajo de las vistas */
   html.vclear .view,html.vclear .view h3,html.vclear .vteams{background:transparent}
   html.vclear .media{background:transparent}
+  /* mismo color del fondo: colores planos tomados de la imagen de fondo (sin degradado) */
+  html.vmatch .view{background:var(--vbg)}html.vmatch .view h3{background:var(--vhead)}html.vmatch .vteams{background:var(--vteams)}
+  html.vmatch .media{background:var(--vbg)}
   /* ---- capas para Resolume: ?layer=base (todo menos las estadisticas del centro) y ?layer=stats (solo las estadisticas del centro) ---- */
   html.layer-stats #stage>*:not(.bottom),html.layer-stats .col,html.layer-stats .strip{visibility:hidden}
   html.layer-stats #stage{background:none}
@@ -417,6 +420,43 @@ function tickBug() {
   $('b-per').textContent = $('period').textContent;
 }
 
+// ---- Líderes / Comparativa del mismo color que el fondo: se mide la imagen detrás de la caja del centro ----
+let matchKey = '', matchCol = null;
+function matchViewColors(set) {
+  const R = document.documentElement, on = !!set.viewMatch && !set.viewClear && !bugMode(SCR);
+  R.classList.toggle('vmatch', on);
+  if (!on) return;
+  const st = $('stage').getBoundingClientRect(), m = $('media').getBoundingClientRect();
+  const src = SCR.bg || set.bgImage || '';
+  const box = [(m.left - st.left) / st.width, (m.top - st.top) / st.height, m.width / st.width, m.height / st.height];
+  const key = src + box.map((v) => v.toFixed(3)).join(',');
+  const apply = () => {
+    if (!matchCol) return;
+    const hex = (c) => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+    const lift = (d) => matchCol.map((v) => v + d);
+    R.style.setProperty('--vbg', hex(matchCol)); R.style.setProperty('--vhead', hex(lift(14))); R.style.setProperty('--vteams', hex(lift(7)));
+  };
+  if (key === matchKey) return apply();
+  matchKey = key;
+  if (!src) {                       // sin imagen: el color de fondo de la pantalla
+    const c = getComputedStyle($('stage')).backgroundColor.match(/\d+/g) || [0, 0, 0];
+    matchCol = c.slice(0, 3).map(Number); return apply();
+  }
+  const im = new Image();
+  im.onload = () => {
+    if (matchKey !== key) return;
+    const N = 48, cv = document.createElement('canvas'); cv.width = cv.height = N;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(im, box[0] * im.naturalWidth, box[1] * im.naturalHeight, box[2] * im.naturalWidth, box[3] * im.naturalHeight, 0, 0, N, N);
+    const d = g.getImageData(0, 0, N, N).data, ch = [[], [], []];
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 128) for (let j = 0; j < 3; j++) ch[j].push(d[i + j]);
+    // mediana: las líneas finas de la cancha no cambian el color
+    matchCol = ch.map((a) => (a.sort((x, y) => x - y), a.length ? a[a.length >> 1] : 0));
+    apply();
+  };
+  im.src = src;
+}
+
 // ---- escalado a la ventana (el lienzo tiene el tamaño de la pantalla elegida) ----
 function fit() { $('stage').style.transform = `scale(${Math.min(innerWidth / SCR.w, innerHeight / SCR.h)})`; }
 addEventListener('resize', fit); fit();
@@ -541,6 +581,7 @@ function render() {
   R.classList.toggle('vclear', !!set.viewClear);
   for (const [k, v] of [['viewBg', '--vbg'], ['viewHead', '--vhead'], ['viewTeams', '--vteams'], ['viewLine', '--vline'], ['viewLabel', '--vlabel'], ['viewLead', '--vlead'], ['viewText', '--vtext']])
     if (set[k]) R.style.setProperty(v, set[k]); else R.style.removeProperty(v);
+  matchViewColors(set);
   $('title').textContent = set.title;
   $('hlogo').innerHTML = logo(S.teams.home); $('alogo').innerHTML = logo(S.teams.away);
   $('hscore').textContent = two(S.teams.home.score); $('ascore').textContent = two(S.teams.away.score);
