@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Scoreboard - Control</title>
 <style>
+  /* marca AdScreen Sports (misma en todo el proyecto) */
+  @font-face{font-family:'Barlow Condensed';src:url(/fonts/barlow-condensed-800.woff2) format('woff2');font-weight:800}
+  a.brand,.brand{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:800;font-size:22px;letter-spacing:.06em;color:#e6edf3;white-space:nowrap;text-decoration:none;line-height:1}
+  a.brand b,.brand b{color:#f5b301}
   *{box-sizing:border-box}
   body{margin:0;background:#0d1117;color:#e6edf3;font:14px/1.3 "Segoe UI",Arial,sans-serif}
   header{display:flex;gap:16px;align-items:center;padding:8px 14px;background:#161b22;position:sticky;top:0;z-index:5;border-bottom:1px solid #30363d}
@@ -103,6 +107,7 @@
 </head>
 <body>
 <header>
+  <a class="brand" href="/" title="Inicio">ADSCREEN <b>SPORTS</b></a>
   <div class="menu">
     <button class="menubtn" id="menuBtn" aria-haspopup="true" aria-expanded="false">☰ Menú <span class="car">▾</span></button>
     <div class="dd" id="menuDd" hidden>
@@ -210,7 +215,18 @@
     <button class="big" data-c='{"a":"set","path":"settings.centerView","value":"none"}'>Ninguna (anuncios de Resolume)</button>
     <button class="big go" data-c='{"a":"set","path":"settings.centerView","value":"leaders"}'>Líderes del juego</button>
     <button class="big go" data-c='{"a":"set","path":"settings.centerView","value":"compare"}'>Comparativa de equipos</button>
-    <span class="kbd">Actual: <b data-bind="settings.centerView"></b></span>
+    <span class="kbd">Actual: <b id="cvNow"></b></span>
+  </div>
+  <h4>Broadcast Pro en el centro <span class="kbd" style="text-transform:none;letter-spacing:0">(mismo diseño y animaciones de la transmisión, con los colores del scoreboard)</span></h4>
+  <div class="row">
+    <button class="big go" data-c='{"a":"set","path":"settings.centerView","value":"pro-compare"}'>Comparativa Pro</button>
+    <button class="big go" data-c='{"a":"set","path":"settings.centerView","value":"pro-leaders"}'>Líderes Pro</button>
+    <button class="big go" data-c='{"a":"set","path":"settings.centerView","value":"pro-lines"}'>Marcador por cuartos</button>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <select id="cvTeam" style="width:auto;min-width:170px"><option value="home">Local</option><option value="away">Visitante</option></select>
+    <select id="cvIdx" style="width:auto;min-width:220px"></select>
+    <button class="big go" id="cvPlayer">Ficha de jugador</button>
   </div>
 </section>
 
@@ -851,6 +867,30 @@ addEventListener('keydown', (e) => {
 });
 
 // ---------- estado ----------
+// ---------- vista del centro: nombres y ficha de jugador (Broadcast Pro en el centro) ----------
+const CV_NAMES = { none: 'Ninguna', leaders: 'Líderes del juego', compare: 'Comparativa de equipos', 'pro-player': 'Ficha de jugador (Pro)',
+  'pro-compare': 'Comparativa Pro', 'pro-leaders': 'Líderes Pro', 'pro-lines': 'Marcador por cuartos (Pro)' };
+let cvKey = '', cvInit = false;
+function renderCenterCtl() {
+  const set = S.settings;
+  $('#cvNow').textContent = CV_NAMES[set.centerView] || set.centerView;
+  if (!cvInit) { cvInit = true; $('#cvTeam').value = set.centerTeam === 'away' ? 'away' : 'home'; }
+  $('#cvTeam').options[0].text = 'Local: ' + (S.teams.home.short || S.teams.home.name);
+  $('#cvTeam').options[1].text = 'Visitante: ' + (S.teams.away.short || S.teams.away.name);
+  const team = $('#cvTeam').value, t = S.teams[team], key = team + JSON.stringify(t.players.map((p) => [p.n, p.name]));
+  if (key === cvKey) return;
+  cvKey = key;
+  const cur = $('#cvIdx').value || (set.centerTeam === team ? String(set.centerIdx) : '');
+  $('#cvIdx').innerHTML = t.players.map((p, i) => (p.name ? `<option value="${i}">${p.n ? '#' + esc(p.n) + ' ' : ''}${esc(p.name)}</option>` : '')).join('');
+  if ([...$('#cvIdx').options].some((o) => o.value === cur)) $('#cvIdx').value = cur;
+}
+$('#cvTeam').onchange = () => { cvKey = ''; $('#cvIdx').value = ''; renderCenterCtl(); };
+$('#cvPlayer').onclick = () => {
+  if ($('#cvIdx').value === '') return toast('Ese equipo no tiene jugadores con nombre');
+  send({ a: 'set', path: 'settings.centerTeam', value: $('#cvTeam').value });
+  send({ a: 'set', path: 'settings.centerIdx', value: +$('#cvIdx').value });
+  send({ a: 'set', path: 'settings.centerView', value: 'pro-player' });
+};
 function paint() {
   if (!S) return;
   $$('[data-bind]').forEach((el) => (el.textContent = get(el.dataset.bind)));
@@ -932,7 +972,7 @@ function connect() {
     if (m.t === 'state') {
       S = m.s; label = m.label;
       clk = { g: S.game.ms, s: S.shot.ms, gr: S.game.running, sr: S.shot.running, tm: S.timer.ms, tr: S.timer.running, at: performance.now() };
-      renderScreens(); renderLayouts(); renderPreview(); paint();
+      renderScreens(); renderLayouts(); renderPreview(); paint(); renderCenterCtl();
       if ((S.scheduleId || null) !== schedCur) loadSched();
       clearTimeout(gt); gt = setTimeout(loadLists, 800);   // el historial cambia con el marcador
     } else if (m.t === 'clock') clk = { g: m.g, s: m.s, gr: m.gr, sr: m.sr, tm: m.tm, tr: m.tr, at: performance.now() };

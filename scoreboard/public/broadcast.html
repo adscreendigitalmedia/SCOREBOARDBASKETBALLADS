@@ -141,6 +141,22 @@
   #g-player .st b { font-weight: 800; font-size: 40px; } #g-player .st span { font-weight: 700; font-size: 17px; letter-spacing: .14em; color: rgba(255,255,255,.65); }
   #g-player .st .warn b { color: #ff5a5a; }
   #g-player .acc { width: 8px; background: var(--accent); }
+
+  /* ===== modo CENTRO (dentro de la pantalla del centro del scoreboard): colores del scoreboard y gráfico centrado ===== */
+  html.center #bug { display: none; }
+  html.center .g { bottom: auto !important; }
+  html.center #g-lines { transform: scale(.92); } html.center #g-lines.on { transform: none; }
+  html.center .gt { background: var(--chead); color: var(--text); }
+  html.center .gt small { color: var(--text); opacity: .8; }
+  html.center .row { border-top-color: var(--cline); }
+  html.center .row .lab, html.center #g-lines th, html.center #g-player .meta, html.center #g-player .st span, html.center #g-player .no small { color: var(--clabel); }
+  html.center .side .v small { color: var(--clabel); opacity: 1; }
+  html.center .teamsRow .mid { background: var(--panel); color: var(--clabel); }
+  html.center .foot { background: var(--cline); }
+  html.center #g-player .acc { background: var(--cline); }
+  html.center #g-player .no, html.center .teamsRow > div:not(.mid), html.center #g-lines td.tn { background: linear-gradient(rgba(255,255,255,.06), rgba(0,0,0,.3)), var(--home); }
+  html.center.clear .teamsRow > div:not(.mid), html.center.clear #g-lines td.tn, html.center.clear #g-player .no { background: transparent; }
+  html.center .shell, html.center #g-player { box-shadow: none; filter: none; }
 </style>
 </head>
 <body>
@@ -165,6 +181,10 @@
 const Q = new URLSearchParams(location.search);
 const PREVIEW = Q.get('preview') === '1';                 // Preview (preparado) o Program (al aire)
 const FROM_OVERLAY = Q.get('from') === 'overlay';
+// ?center=1: dentro de la pantalla del centro del scoreboard (display.html). Recibe el estado del display (sin conexión propia),
+// muestra el gráfico que escogieron en "Vista del centro" y usa los colores del scoreboard (los de Líderes / Comparativa).
+const CENTER = Q.get('center') === '1';
+if (CENTER) document.documentElement.classList.add('center');
 const $ = (id) => document.getElementById(id);
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const two = (n) => String(n).padStart(2, '0');
@@ -176,10 +196,11 @@ let S = null, label = '', clk = { g: 0, s: 0, gr: false, sr: false, tm: 0, tr: f
 
 // ---------- escala: diseño 1920×1080 dentro de cualquier tamaño de ventana ----------
 function fit() {
+  if (CENTER && cur.g) return centerFit($('g-' + cur.g));
   const k = Math.min(innerWidth / 1920, innerHeight / 1080);
   $('stage').style.transform = `translate(${(innerWidth - 1920 * k) / 2}px, ${(innerHeight - 1080 * k) / 2}px) scale(${k})`;
 }
-addEventListener('resize', fit); fit();
+addEventListener('resize', fit);
 
 // ---------- configuración (colores, posición, tamaño, datos visibles) ----------
 let cfgKey = '';
@@ -366,11 +387,36 @@ function fill(el, g, lv) {
 // ---------- qué gráfico se ve: sale el anterior (su animación de salida) y entra el nuevo ----------
 const OUT_MS = 450;
 let cur = { key: '', g: '', lv: null }, swapT = null, builtKey = {};
+fit();
+// modo centro: el gráfico se centra y se agranda para llenar la caja del centro
+function centerFit(el) {
+  const w = el.offsetWidth, h = el.offsetHeight; if (!w || !h) return;
+  const L = (1920 - w) / 2 + 'px', T = (1080 - h) / 2 + 'px';
+  if (el.style.left !== L) el.style.left = L; if (el.style.top !== T) el.style.top = T;
+  const k = Math.min(innerWidth / w, innerHeight / h) * 0.94;
+  const tr = `translate(${innerWidth / 2 - 960 * k}px, ${innerHeight / 2 - 540 * k}px) scale(${k})`;
+  if ($('stage').style.transform !== tr) $('stage').style.transform = tr;
+}
+// colores del scoreboard: los mismos de Líderes / Comparativa (incluido "Mismo color del fondo", que se calcula en el display)
+let colKey = '';
+function centerColors() {
+  let R, cs; try { R = parent.document.documentElement; cs = getComputedStyle(R); } catch (_) { return; }
+  const v = (n, d) => cs.getPropertyValue(n).trim() || d, clear = R.classList.contains('vclear');
+  const c = { panel: v('--vbg', '#050a24'), head: v('--vhead', '#0a2fb8'), teams: v('--vteams', '#0a2fb8'), line: v('--vline', '#1b4bff'),
+    label: v('--vlabel', '#9db4ff'), lead: v('--vlead', '#ffd400'), text: v('--vtext', '#ffffff') };
+  const key = JSON.stringify(c) + clear; if (key === colKey) return; colKey = key;
+  const D = document.documentElement.style;
+  D.setProperty('--panel', clear ? 'transparent' : c.panel); D.setProperty('--panelA', clear ? 'transparent' : c.panel);
+  D.setProperty('--chead', clear ? 'transparent' : c.head); D.setProperty('--home', c.teams); D.setProperty('--away', c.teams);
+  D.setProperty('--cline', c.line); D.setProperty('--clabel', c.label); D.setProperty('--accent', c.lead); D.setProperty('--text', c.text);
+  document.documentElement.classList.toggle('clear', clear);
+}
+if (CENTER) setInterval(centerColors, 1000);               // el color automático del fondo puede cambiar después
 function liveKey(lv) { return lv.g ? lv.g + (lv.g === 'player' ? ':' + lv.team + ':' + lv.idx : '') : ''; }
 function syncGfx(lv) {
   const key = liveKey(lv);
   if (key === cur.key) {                                     // el mismo gráfico: solo se actualizan los datos
-    if (cur.g) { const el = $('g-' + cur.g); maybeBuild(el, cur.g, lv); fill(el, cur.g, lv); }
+    if (cur.g) { const el = $('g-' + cur.g); maybeBuild(el, cur.g, lv); fill(el, cur.g, lv); if (CENTER) centerFit(el); }
     return;
   }
   clearTimeout(swapT);
@@ -381,6 +427,7 @@ function syncGfx(lv) {
   swapT = setTimeout(() => {
     const el = $('g-' + lv.g);
     builtKey[lv.g] = null; maybeBuild(el, lv.g, lv); fill(el, lv.g, lv);   // se arma de nuevo al entrar
+    if (CENTER) centerFit(el);
     void el.offsetWidth;                                     // asegura que la entrada se anime desde el estado oculto
     el.classList.remove('out'); el.classList.add('on');
   }, wasOn ? OUT_MS : 0);
@@ -391,7 +438,14 @@ function maybeBuild(el, g, lv) {
   builtKey[g] = k; el.innerHTML = GFX[g].build(lv);
 }
 
+const CENTER_G = { 'pro-player': 'player', 'pro-compare': 'compare', 'pro-leaders': 'leaders', 'pro-lines': 'lines' };
 function render() {
+  if (CENTER) {
+    centerColors();
+    const set = S.settings;
+    syncGfx({ bug: false, g: CENTER_G[set.centerView] || '', team: set.centerTeam === 'away' ? 'away' : 'home', idx: Math.max(0, Math.min(11, set.centerIdx | 0)) });
+    return;
+  }
   const c = S.settings.bcast; applyCfg(c);
   const lv = S.bcast[PREVIEW ? 'pvw' : 'pgm'];
   renderBug();
@@ -408,16 +462,7 @@ let wait = 500;
 function connect() {
   const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
   ws.onopen = () => { wait = 500; };
-  ws.onmessage = (e) => {
-    let m; try { m = JSON.parse(e.data); } catch (_) { return; }
-    if (m.t === 'state') {
-      S = m.s; label = m.label;
-      clk = { g: S.game.ms, s: S.shot.ms, gr: S.game.running, sr: S.shot.running, tm: S.timer.ms, tr: S.timer.running, at: performance.now() };
-      if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(render); else render();
-    } else if (m.t === 'clock') {
-      clk = { g: m.g, s: m.s, gr: m.gr, sr: m.sr, tm: m.tm, tr: m.tr, at: performance.now() };
-    }
-  };
+  ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch (_) { return; } onMsg(m); };
   ws.onclose = () => {
     // sin conexión: los relojes se congelan donde iban (no se inventa tiempo) hasta que vuelva el estado real
     const el = performance.now() - clk.at;
@@ -425,7 +470,20 @@ function connect() {
     setTimeout(connect, wait); wait = Math.min(5000, wait * 2);
   };
 }
-connect();
+function onMsg(m) {
+    if (m.t === 'state') {
+      S = m.s; label = m.label;
+      clk = { g: S.game.ms, s: S.shot.ms, gr: S.game.running, sr: S.shot.running, tm: S.timer.ms, tr: S.timer.running, at: performance.now() };
+      if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(render); else render();
+    } else if (m.t === 'clock') {
+      clk = { g: m.g, s: m.s, gr: m.gr, sr: m.sr, tm: m.tm, tr: m.tr, at: performance.now() };
+    }
+}
+if (CENTER) {
+  // el display de la cancha le pasa el estado: mismos datos, sin otra conexión
+  addEventListener('message', (e) => { if (e.origin === location.origin && e.data && e.data.t) onMsg(e.data); });
+  if (parent !== window) parent.postMessage({ t: 'centerReady' }, location.origin);
+} else connect();
 </script>
 </body>
 </html>

@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Scoreboard - Dashboard</title>
 <style>
+  /* marca AdScreen Sports (misma en todo el proyecto) */
+  @font-face{font-family:'Barlow Condensed';src:url(/fonts/barlow-condensed-800.woff2) format('woff2');font-weight:800}
+  a.brand,.brand{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:800;font-size:22px;letter-spacing:.06em;color:#e6edf3;white-space:nowrap;text-decoration:none;line-height:1}
+  a.brand b,.brand b{color:#f5b301}
   *{box-sizing:border-box}
   body{margin:0;background:#0d1117;color:#e6edf3;font:14px/1.4 "Segoe UI",Arial,sans-serif}
   header{display:flex;gap:12px;align-items:center;padding:10px 16px;background:#161b22;border-bottom:1px solid #30363d;flex-wrap:wrap;position:sticky;top:0;z-index:5}
@@ -78,6 +82,7 @@
 </head>
 <body>
 <header>
+  <a class="brand" href="/" title="Inicio">ADSCREEN <b>SPORTS</b></a>
   <h1>Dashboard</h1>
   <a href="/control.html">← Panel de control</a>
   <span class="sp"></span>

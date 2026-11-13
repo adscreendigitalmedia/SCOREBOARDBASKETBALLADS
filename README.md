@@ -109,6 +109,8 @@ Una 4.ª opción del Overlay para transmisión, con presentación televisiva pro
 - **Seguridad:** la página de gráficos es de solo lectura. Los comandos de producción los revisa el servidor: el rol Transmisión solo puede operar gráficos (no anota ni toca relojes) y los demás roles no pueden operar gráficos.
 - **Relojes y puntos:** salen del mismo WebSocket que el display de la cancha (sin cronómetros propios). Si se cae la conexión, el reloj se congela donde iba y al reconectar (automático) se recupera el estado real.
 - **Letra:** Barlow Condensed (licencia SIL OFL, en `public/fonts`), incluida en el proyecto: se ve igual sin internet.
+- **En la pantalla del centro del scoreboard:** en el panel, *Vista del centro → Broadcast Pro en el centro*: Comparativa Pro, Líderes Pro, Marcador por cuartos y Ficha de jugador (escoge equipo y jugador). Mismo diseño y animaciones de entrada y salida que en la transmisión, pero con los **colores del scoreboard** (los de *Colores de Líderes / Comparativa*, incluido *Mismo color del fondo (automático)* y *Sin fondos*). Las vistas de siempre (Líderes del juego, Comparativa de equipos) siguen igual. Rol: Jugada.
+- **Marca:** ADSCREEN SPORTS arriba en el panel, el Dashboard, la consola de producción y la pantalla de entrada; el menú ☰ también está en la consola.
 
 ## Varias pantallas y tamaños
 Ocultas en el panel; para verlas marca *Mostrar pantallas y tamaños* en la sección *Pantallas: diseño*.

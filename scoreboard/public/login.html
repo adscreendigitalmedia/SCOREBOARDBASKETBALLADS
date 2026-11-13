@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Scoreboard - Entrar</title>
 <style>
+  /* marca AdScreen Sports (misma en todo el proyecto) */
+  @font-face{font-family:'Barlow Condensed';src:url(/fonts/barlow-condensed-800.woff2) format('woff2');font-weight:800}
+  a.brand,.brand{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:800;font-size:22px;letter-spacing:.06em;color:#e6edf3;white-space:nowrap;text-decoration:none;line-height:1}
+  a.brand b,.brand b{color:#f5b301}
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0d1117;color:#e6edf3;font:15px/1.4 "Segoe UI",Arial,sans-serif;padding:16px}
   .box{width:100%;max-width:360px;background:#161b22;border:1px solid #30363d;border-radius:10px;padding:24px}
@@ -23,7 +27,8 @@
 <body>
 <div class="box">
   <form id="login">
-    <h1>Scoreboard</h1>
+    <div class="brand" style="font-size:32px;margin-bottom:10px">ADSCREEN <b>SPORTS</b></div>
+    <h1>Iniciar sesión</h1>
     <p class="sub">Entra con tu usuario para usar el panel.</p>
     <label for="u">Usuario</label><input id="u" autocomplete="username" autocapitalize="none" required>
     <label for="p">Contraseña</label><input id="p" type="password" autocomplete="current-password" required>

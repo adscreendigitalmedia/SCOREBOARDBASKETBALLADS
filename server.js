@@ -192,7 +192,9 @@ function defaults() {
       bugLayouts: [],            // diseños TV propios (imagen + posición de cada dato)   // pantallas: display.html?p=<id>  (Principal = display.html)
       center: 'black',      // black | transparent | green
       bottom: 'stats',      // cuadro inferior de cada equipo: stats | note
-      centerView: 'none',   // none | leaders | compare
+      centerView: 'none',   // none | leaders | compare | pro-player | pro-compare | pro-leaders | pro-lines (Broadcast Pro en el centro)
+      centerTeam: 'home',   // ficha de jugador del centro: equipo y jugador
+      centerIdx: 0,
       foulBonus: 4,         // BONUS se enciende al llegar a estas faltas de equipo en el periodo (FIBA = 4, NBA = 5)
       otFoulsCarry: false,  // true = en tiempo extra siguen las faltas del 4to (regla FIBA); false = cada periodo empieza en 0
       foulOut: 5,           // faltas personales para eliminar al jugador (FIBA = 5, NBA = 6)

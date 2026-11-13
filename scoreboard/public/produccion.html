@@ -9,8 +9,19 @@
   * { box-sizing: border-box; }
   body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; font-size: 14px; }
   header { display: flex; gap: 14px; align-items: center; padding: 8px 16px; background: #161b22; border-bottom: 1px solid #30363d; position: sticky; top: 0; z-index: 5; }
-  header .brand { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: .06em; }
-  header .brand b { color: #f5b301; }
+  @font-face { font-family: 'Barlow Condensed'; src: url(/fonts/barlow-condensed-800.woff2) format('woff2'); font-weight: 800; }
+  header a.brand, .brand { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: .06em; color: #e6edf3; white-space: nowrap; text-decoration: none; line-height: 1; }
+  header a.brand b, .brand b { color: #f5b301; }
+  /* menú desplegable (igual que el panel) */
+  .menu { position: relative; }
+  .menubtn { font-weight: 600; padding: 6px 12px; } .menubtn .car { font-size: 10px; opacity: .7; }
+  .dd { position: absolute; top: calc(100% + 6px); left: 0; min-width: 250px; background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5); padding: 6px; z-index: 20; max-height: calc(100vh - 70px); overflow-y: auto; }
+  .dd a { display: block; padding: 8px 10px; border-radius: 6px; color: #e6edf3; text-decoration: none; font-size: 14px; }
+  .dd a:hover { background: #21262d; } .dd a.cur { background: #1f6feb; color: #fff; }
+  .ddh { color: #8b949e; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px 3px; border-top: 1px solid #30363d; margin-top: 4px; }
+  .ddh:first-child { border-top: 0; margin-top: 0; }
+  [hidden] { display: none !important; }
   header .sp { margin-left: auto; display: flex; gap: 14px; align-items: center; color: #8b949e; font-size: 13px; }
   header a { color: #58a6ff; text-decoration: none; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: #f85149; display: inline-block; margin-right: 6px; } .dot.ok { background: #3fb950; }
@@ -55,9 +66,26 @@
 </head>
 <body>
 <header>
-  <span class="brand">ADSCREEN <b>SPORTS</b> · Broadcast Pro</span>
-  <span class="kbd">Consola de producción</span>
-  <span class="sp"><span><span class="dot" id="dot"></span><span id="status">Conectando…</span></span><span>👤 <b id="uname"></b></span><a href="/control.html" id="panelLink">Panel</a><a href="#" id="logout">Salir</a></span>
+  <a class="brand" href="/" title="Inicio">ADSCREEN <b>SPORTS</b></a>
+  <div class="menu">
+    <button class="menubtn" id="menuBtn" aria-haspopup="true" aria-expanded="false">☰ Menú <span class="car">▾</span></button>
+    <div class="dd" id="menuDd" hidden>
+      <div class="ddh" data-need="historial">Administración</div>
+      <a href="/admin.html#resumen" data-need="admin">🏠 Inicio (Dashboard)</a>
+      <a href="/admin.html#juegos" data-need="historial">🏀 Juegos (historial)</a>
+      <a href="/admin.html#programar" data-need="admin">📅 Programar juegos</a>
+      <a href="/admin.html#usuarios" data-need="admin">👥 Usuarios y permisos</a>
+      <div class="ddh" data-need="panel">Mesa de control</div>
+      <a href="/control.html" data-need="panel">🎛️ Panel de control</a>
+      <div class="ddh">Transmisión</div>
+      <a href="/produccion.html" class="cur">🎬 Producción (Broadcast Pro)</a>
+      <div class="ddh">Mi cuenta</div>
+      <a href="/login.html?change=1&next=/produccion.html">🔑 Cambiar contraseña</a>
+      <a href="#" id="logout">🚪 Cerrar sesión</a>
+    </div>
+  </div>
+  <span class="kbd">Broadcast Pro · Consola de producción</span>
+  <span class="sp"><span><span class="dot" id="dot"></span><span id="status">Conectando…</span></span><span>👤 <b id="uname"></b></span><button id="logout2" style="padding:5px 12px">Salir</button></span>
 </header>
 <main>
   <div class="mon">
@@ -150,12 +178,19 @@ const send = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t:
 $('#uPgm').textContent = location.origin + '/broadcast';
 $('#uPvw').textContent = location.origin + '/broadcast?preview=1';
 $$('[data-copy]').forEach((b) => (b.onclick = () => { const t = $('#' + b.dataset.copy).textContent; navigator.clipboard ? navigator.clipboard.writeText(t).then(() => toast('Enlace copiado', true), () => toast(t, true)) : toast(t, true); }));
-$('#logout').onclick = async (e) => { e.preventDefault(); await fetch('/api/logout', { method: 'POST' }); location.href = '/login.html'; };
+const logout = async (e) => { e.preventDefault(); await fetch('/api/logout', { method: 'POST' }); location.href = '/login.html'; };
+$('#logout').onclick = logout; $('#logout2').onclick = logout;
+// menú desplegable: abre/cierra con el botón; se cierra al tocar fuera o con Esc
+const menu = (open) => { $('#menuDd').hidden = !open; $('#menuBtn').setAttribute('aria-expanded', open); };
+$('#menuBtn').onclick = (e) => { e.stopPropagation(); menu($('#menuDd').hidden); };
+document.addEventListener('click', (e) => { if (!e.target.closest('.menu')) menu(false); });
+const PANEL_ROLES = ['relojes', 'anotacion', 'jugada', 'pantallas', 'nuevojuego'];
 fetch('/api/me').then((r) => r.json()).then((j) => {
   if (!j.ok) return (location.href = '/login.html?next=/produccion.html');
   ME = j.user; $('#uname').textContent = ME.name || ME.username;
-  // quien solo tiene el rol Transmisión no usa el panel de la mesa
-  $('#panelLink').hidden = ME.roles.length === 1 && ME.roles[0] === 'transmision';
+  // cada opción del menú solo para quien la puede usar (el admin, todas)
+  const has = (r) => ME.roles.includes('admin') || (r === 'panel' ? PANEL_ROLES.some((x) => ME.roles.includes(x)) : ME.roles.includes(r));
+  $$('#menuDd [data-need]').forEach((a) => (a.hidden = !has(a.dataset.need)));
 });
 
 // ---------- botones ----------
@@ -180,6 +215,7 @@ $('#plTeam').onchange = () => fillPlayers(true);
 $('#reset').onclick = () => { if (confirm('¿Volver a la posición, tamaño y colores originales de Broadcast Pro?')) send({ a: 'bcReset' }); };
 addEventListener('keydown', (e) => {
   if (e.target.closest('input,select,textarea')) return;
+  if (!$('#menuDd').hidden) { if (e.key === 'Escape') menu(false); return; }   // con el menú abierto, Enter/Esc no tocan la transmisión
   if (e.key === 'Enter') { e.preventDefault(); send({ a: 'bcTake' }); }
   else if (e.key === 'Escape') send({ a: 'bcClear' });
 });

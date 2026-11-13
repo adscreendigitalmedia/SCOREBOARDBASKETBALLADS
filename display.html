@@ -116,6 +116,8 @@
   /* sin fondos: se ve la plantilla de fondo debajo de las vistas */
   html.vclear .view,html.vclear .view h3,html.vclear .vteams{background:transparent}
   html.vclear .media{background:transparent}
+  /* gráficos Broadcast Pro en el centro (se crea la primera vez que se usan y se queda, para que entren y salgan animados) */
+  .cframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none}
   /* mismo color del fondo: colores planos tomados de la imagen de fondo (sin degradado) */
   html.vmatch .view{background:var(--vbg)}html.vmatch .view h3{background:var(--vhead)}html.vmatch .vteams{background:var(--vteams)}
   html.vmatch .media{background:var(--vbg)}
@@ -197,7 +199,7 @@
   </div>
   <div class="bottom">
     <div class="col"><div class="panel" id="hpanel"></div><div class="tbox" id="hnote"></div></div>
-    <div class="center"><div class="media" id="media"></div><div class="strip"></div></div>
+    <div class="center"><div class="media" id="media"><div id="mview"></div></div><div class="strip"></div></div>
     <div class="col"><div class="panel" id="apanel"></div><div class="tbox" id="anote"></div></div>
   </div>
   <div id="bug"><div class="bugin" id="bugin"></div><div id="bugc"></div></div>
@@ -596,7 +598,10 @@ function render() {
   $('period').textContent = S.timer.kind ? S.timer.label : S.final ? 'FINAL' : label;
   $('period').classList.toggle('final', !!S.final);
   const v = set.centerView;
-  $('media').innerHTML = LAYER === 'base' ? '' : v === 'leaders' ? leadersView() : v === 'compare' ? compareView() : '';
+  const pro = LAYER !== 'base' && /^pro-/.test(v || '');
+  $('mview').innerHTML = LAYER === 'base' || pro ? '' : v === 'leaders' ? leadersView() : v === 'compare' ? compareView() : '';
+  if (pro && !$('cframe')) $('media').insertAdjacentHTML('beforeend', '<iframe id="cframe" class="cframe" src="/broadcast.html?center=1" title="Gráficos del centro" scrolling="no"></iframe>');
+  toCenter();
   renderBug(); tickBug();
 }
 
@@ -639,6 +644,13 @@ function horn() {
   clearTimeout(horn.t);
   horn.t = setTimeout(() => f.classList.remove('on'), HORN_MS);
 }
+
+// ---- gráficos Broadcast Pro del centro: reciben el mismo estado que esta pantalla ----
+function toCenter() {
+  const f = $('cframe');
+  if (f && f.contentWindow && S) f.contentWindow.postMessage({ t: 'state', s: S, label }, location.origin);
+}
+addEventListener('message', (e) => { if (e.origin === location.origin && e.data && e.data.t === 'centerReady') toCenter(); });
 
 // ---- WebSocket ----
 function connect() {
