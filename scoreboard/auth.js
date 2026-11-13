@@ -9,6 +9,7 @@ const ROLES = {
   pantallas: 'Pantallas',
   nuevojuego: 'Crear juego nuevo',        // permisos de juegos: nadie los tiene hasta que el admin los da
   historial: 'Editar juegos del historial',
+  transmision: 'Transmisión (gráficos TV)',   // Broadcast Pro: solo opera los gráficos, no toca el juego
   admin: 'Admin',
 };
 const GAME_PERMS = ['nuevojuego', 'historial'];
@@ -47,6 +48,7 @@ const BY_ACTION = {
   anotacion: ['playerStat', 'shot', 'undo', 'saveTeam', 'loadTeam', 'importRoster'],
   pantallas: ['screenAdd', 'screenDel', 'screenFit', 'layoutAdd', 'layoutDel'],
   nuevojuego: ['resetGame', 'scheduleStart'],
+  transmision: ['bcCue', 'bcBug', 'bcTake', 'bcClear', 'bcClearAll', 'bcSet', 'bcReset'],
   admin: ['deleteTeam'],
 };
 const ACTION_ROLES = {};

@@ -46,7 +46,8 @@ const qs = new URLSearchParams(location.search);
 // solo rutas internas (evita redirigir a otro sitio)
 const next = /^\/[^/\\]/.test(qs.get('next') || '') ? qs.get('next') : '/control.html';
 // al entrar: el admin va directo a Inicio (dashboard); los demás, a donde iban (el panel)
-const home = (u) => (u && u.roles.includes('admin') ? '/admin.html' : next);
+const home = (u) => (u && u.roles.includes('admin') ? '/admin.html'
+  : u && u.roles.length === 1 && u.roles[0] === 'transmision' ? '/produccion.html' : next);   // solo gráficos de TV → su consola
 const msg = (t, ok) => { $('#msg').textContent = t; $('#msg').classList.toggle('ok', !!ok); };
 const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   .then(async (r) => ({ ok: r.ok, ...(await r.json().catch(() => ({}))) }));

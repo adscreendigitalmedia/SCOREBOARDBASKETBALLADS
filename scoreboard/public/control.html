@@ -111,6 +111,8 @@
       <a href="/admin.html#juegos" data-need="historial">🏀 Juegos (historial)</a>
       <a href="/admin.html#programar" data-need="admin">📅 Programar juegos</a>
       <a href="/admin.html#usuarios" data-need="admin">👥 Usuarios y permisos</a>
+      <div class="ddh" data-need="transmision">Transmisión</div>
+      <a href="/produccion.html" data-need="transmision">🎬 Producción (Broadcast Pro)</a>
       <div class="ddh">Mi cuenta</div>
       <a href="/login.html?change=1&next=/control.html">🔑 Cambiar contraseña</a>
       <a href="#" id="logout">🚪 Cerrar sesión</a>
@@ -293,6 +295,8 @@
   <h3>Overlay para transmisión (OBS)</h3>
   <div class="kbd">Marcador compacto con fondo transparente para ponerlo encima del video. En OBS: <b>Fuentes → + → Navegador</b>, pega el enlace
     y pon el mismo ancho y alto de abajo (el tamaño de tu transmisión, normalmente 1920×1080).</div>
+  <div class="row" style="margin:6px 0"><a class="btn sm" href="/produccion.html" target="_blank">🎬 Consola Broadcast Pro</a>
+    <span class="kbd"><b>Broadcast Pro</b>: scorebug y gráficos de TV (jugador, comparativa, líderes, cuartos) con Preview y AL AIRE. Escoge <b>Estilo: Broadcast Pro</b> para usarlo con este mismo enlace, u OBS con <code>/broadcast</code>.</span></div>
   <div id="overlay"></div>
   <h4>Diseños TV propios (sube tu imagen)</h4>
   <div class="kbd">Haz tu banner en Photoshop / Canva (PNG, puede tener transparencia) y súbelo. Luego arrastra cada dato (puntos, nombres, reloj…) a su lugar sobre la imagen.
@@ -434,7 +438,7 @@ function bugBlock(i) {
   const P = `settings.screens.${i}`;
   return `<div class="row" style="margin-top:6px">
           <div><label>Estilo</label><select data-path="${P}.bugStyle">
-            <option value="tv">Banner TV compacto</option><option value="top">Fila de arriba del tablero</option><option value="custom">Diseño propio (imagen)</option></select></div>
+            <option value="tv">Banner TV compacto</option><option value="top">Fila de arriba del tablero</option><option value="custom">Diseño propio (imagen)</option><option value="pro">Broadcast Pro (AdScreen Sports)</option></select></div>
           <div><label>Diseño propio</label><select data-path="${P}.bugLayout"><option value="">—</option>${(S.settings.bugLayouts || []).map((L) => `<option value="${L.id}">${esc(L.name)}</option>`).join('')}</select></div>
           <div><label>Posición</label><select data-path="${P}.bugPos">
             <option value="tl">Arriba izquierda</option><option value="tc">Arriba</option><option value="tr">Arriba derecha</option>
@@ -507,9 +511,9 @@ function renderScreens() {
     if (fx) fx.max = Math.round((100 - sc.bugW) * 10) / 10;
     if (fy) fy.max = Math.round((100 - sc.bugH) * 10) / 10;
     if (bp) bp.textContent = `= ${bw}×${bh} px del video`;
-    const forma = sc.bugStyle === 'custom' ? 'diseño propio' : sc.bugStyle === 'tv' ? (bw / bh >= 5 ? 'banner' : bw / bh >= 2.2 ? 'barra' : bw / bh >= 0.8 ? 'caja' : 'vertical')
+    const forma = sc.bugStyle === 'pro' ? 'Broadcast Pro (posición y tamaño en la consola de producción)' : sc.bugStyle === 'custom' ? 'diseño propio' : sc.bugStyle === 'tv' ? (bw / bh >= 5 ? 'banner' : bw / bh >= 2.2 ? 'barra' : bw / bh >= 0.8 ? 'caja' : 'vertical')
       : (bw / bh >= 4.5 ? 'fila del tablero: franja' : bw / bh >= 1.3 ? 'fila del tablero: caja' : 'fila del tablero: póster');
-    if (tv) { w.textContent = '📺 ' + forma + ', ' + bw + '×' + bh + ' px, fondo transparente'; w.style.color = '#58a6ff'; return; }
+    if (tv) { w.textContent = '📺 ' + forma + (sc.bugStyle === 'pro' ? '' : ', ' + bw + '×' + bh + ' px') + ', fondo transparente'; w.style.color = '#58a6ff'; return; }
     w.style.color = '';
     if (sc.w - 2 * sc.padX - 2 * sc.sideW - 2 * sc.gapX < 40) bad.push('los laterales no dejan espacio al centro');
     if ((sc.w - 2 * sc.padX - 2 * sc.scoreW - sc.clockW) / 2 < 20) bad.push('marcadores + reloj no dejan espacio a los logos');

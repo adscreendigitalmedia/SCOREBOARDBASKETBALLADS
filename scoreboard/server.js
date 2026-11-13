@@ -74,7 +74,7 @@ function cleanScreen(x) {
     bugX: Math.round(Math.max(0, Math.min(100, Number(x.bugX) || 0)) * 10) / 10, bugY: Math.round(Math.max(0, Math.min(100, Number(x.bugY) || 0)) * 10) / 10,
     bugW: Math.round(Math.max(3, Math.min(100, Number(x.bugW) || 50)) * 10) / 10, bugH: Math.round(Math.max(3, Math.min(100, Number(x.bugH) || 8)) * 10) / 10,
     // estilo del marcador tipo TV: top = la fila de arriba del tablero (mismo diseño), tv = banner compacto
-    bugStyle: ['tv', 'custom'].includes(x.bugStyle) ? x.bugStyle : 'top',   // custom = diseño TV propio (imagen subida)
+    bugStyle: ['tv', 'custom', 'pro'].includes(x.bugStyle) ? x.bugStyle : 'top',   // custom = diseño TV propio (imagen subida); pro = Broadcast Pro
     bugLayout: String(x.bugLayout || '').replace(/[^\w-]/g, '').slice(0, 24) };
   for (const [k, [lo, hi]] of Object.entries(SCREEN_LIMITS)) out[k] = Math.round(Math.max(lo, Math.min(hi, Number(x[k] ?? BASE_SCREEN[k]) || BASE_SCREEN[k])));
   // X / Y nunca pasan del máximo real (el marcador no puede salirse): así al restar se mueve de inmediato
@@ -113,6 +113,41 @@ function cleanLayout(x) {
     img: typeof x.img === 'string' && /^\/bg\/[\w.-]+$/.test(x.img) ? x.img : '', ar: r1(x.ar, 0.05, 40, 8), font: String(x.font || '').replace(/[^\w ,'-]/g, '').slice(0, 60), fields };
 }
 
+// ---------- Broadcast Pro (gráficos de TV): configuración y lo que está en Preview / Program ----------
+const BC_DEFAULT = {
+  bugPos: 'bc', bugX: 0, bugY: 0, bugScale: 100,       // scorebug: anclaje + ajuste fino (px de 1920×1080) + tamaño %
+  gfxScale: 100, gfxY: 0,                               // demás gráficos: tamaño % y subir/bajar (px)
+  home: '#c8102e', away: '#1d4ed8', accent: '#f5b301', panel: '#0b1020', text: '#ffffff',
+  showLogos: true, showFouls: true, showBonus: true, showPoss: true, showShot: true, showTO: true, showBrand: true,
+  names: false,                                         // true = nombre completo del equipo; false = siglas
+  alerts: true,                                         // aviso automático de tiempo fuera / descanso / final sobre el scorebug
+};
+const BC_GFX = ['', 'player', 'compare', 'leaders', 'lines'];
+// valor de respaldo válido para un ajuste (el guardado si es válido; si no, el de fábrica)
+function cleanOne(k, v) {
+  const d = BC_DEFAULT[k];
+  if (typeof d === 'boolean') return typeof v === 'boolean' ? v : d;
+  if (typeof d === 'number') return Number.isFinite(v) ? v : d;
+  if (k === 'bugPos') return ['tl', 'tc', 'tr', 'bl', 'bc', 'br'].includes(v) ? v : d;
+  return /^#[0-9a-f]{6}$/i.test(String(v)) ? String(v).toLowerCase() : d;
+}
+const hexOk = (v) => /^#[0-9a-f]{6}$/i.test(String(v));
+// base = valores a conservar si llega algo inválido (al cambiar un ajuste se queda el anterior)
+function cleanBcast(x, base = BC_DEFAULT) {
+  const o = {}, c = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.round(Math.max(lo, Math.min(hi, +v))) : d);
+  for (const k of Object.keys(BC_DEFAULT)) {
+    const v = (x || {})[k], d = cleanOne(k, base[k]);
+    if (typeof d === 'boolean') o[k] = v === undefined ? d : !!v;
+    else if (typeof d === 'number') o[k] = k === 'bugScale' || k === 'gfxScale' ? c(v, 40, 250, d) : c(v, -1080, 1080, d);
+    else if (k === 'bugPos') o[k] = ['tl', 'tc', 'tr', 'bl', 'bc', 'br'].includes(v) ? v : d;
+    else o[k] = hexOk(v) ? String(v).toLowerCase() : d;
+  }
+  return o;
+}
+// una "salida" (Preview o Program): scorebug encendido o no + el gráfico de turno (con su equipo / jugador)
+const cleanLive = (x = {}) => ({ bug: x.bug === undefined ? true : !!x.bug, g: BC_GFX.includes(x.g) ? x.g : '',
+  team: x.team === 'away' ? 'away' : 'home', idx: Math.max(0, Math.min(11, Math.round(+x.idx) || 0)) });
+
 const mainScreen = () => ({ id: 'principal', name: 'Principal', bg: '', layout: 'full', ...BASE_SCREEN });
 // Overlay para transmisión (OBS): marcador compacto con fondo transparente, banner TV abajo al centro
 const overlayScreen = () => ({ id: 'overlay', name: 'Overlay para transmisión', bg: '', ...BASE_SCREEN, layout: 'bug', bugStyle: 'tv', bugPos: 'bc', bugW: 50, bugH: 8 });
@@ -125,6 +160,7 @@ function defaults() {
     },
     period: 1,
     final: false,
+    bcast: { pvw: cleanLive(), pgm: cleanLive() },   // Broadcast Pro: Preview (preparado) y Program (al aire), separados
     possession: null,                       // 'home' | 'away' | null
     periodScores: { home: [0], away: [0] }, // puntos por periodo
     game: { ms: 600000, running: false },
@@ -152,6 +188,7 @@ function defaults() {
       viewMatch: false,     // true = fondo y franjas del mismo color que la imagen de fondo (se toma solo)
       viewClear: false,     // true = sin fondos (se ve la imagen de fondo / plantilla)
       screens: [mainScreen(), cleanScreen(overlayScreen())],
+      bcast: cleanBcast({}),     // Broadcast Pro: posición, tamaño, colores y datos visibles
       bugLayouts: [],            // diseños TV propios (imagen + posición de cada dato)   // pantallas: display.html?p=<id>  (Principal = display.html)
       center: 'black',      // black | transparent | green
       bottom: 'stats',      // cuadro inferior de cada equipo: stats | note
@@ -180,6 +217,8 @@ function migrate(saved) {
   if (!s.settings.screens.some((x) => x.id === 'principal')) s.settings.screens.unshift(mainScreen());
   if (!s.settings.screens.some((x) => x.id === 'overlay')) s.settings.screens.splice(1, 0, cleanScreen(overlayScreen()));
   s.settings.bugLayouts = (Array.isArray(s.settings.bugLayouts) ? s.settings.bugLayouts : []).map(cleanLayout);
+  s.settings.bcast = cleanBcast(s.settings.bcast);
+  s.bcast = { pvw: cleanLive((saved.bcast || {}).pvw), pgm: cleanLive((saved.bcast || {}).pgm) };
   for (const x of s.settings.screens) if (x.id === 'principal' && !(saved.settings?.screens || []).find((y) => y.id === 'principal')?.layout) x.layout = 'full';
   for (const k of ['home', 'away']) {
     s.teams[k] = { ...d.teams[k], ...(saved.teams || {})[k] };
@@ -302,7 +341,8 @@ function newGame(prep) {
   const played = events.length > 0 || S.teams.home.score || S.teams.away.score;
   if (played) store.updateGame(gameId, { home: S.teams.home.name, away: S.teams.away.name, hs: S.teams.home.score, aw: S.teams.away.score, ended: Date.now(), final: S });
   if (S.scheduleId) { const l = getSched(), g = l.find((x) => x.id === S.scheduleId); if (g) { g.status = 'terminado'; setSched(l); } }
-  const keep = S.settings; S = defaults(); S.settings = keep; S.game.ms = keep.periodMs; resetTimeouts();
+  const keep = S.settings, bc = S.bcast; S = defaults(); S.settings = keep; S.game.ms = keep.periodMs; resetTimeouts();
+  S.bcast = { pvw: { ...bc.pvw, g: '', idx: 0 }, pgm: { ...bc.pgm, g: '', idx: 0 } };   // jugadores nuevos: ningún gráfico queda al aire
   if (prep) prep();
   if (played) gameId = store.newGame({ home: S.teams.home.name, away: S.teams.away.name });
   else store.updateGame(gameId, { home: S.teams.home.name, away: S.teams.away.name, hs: 0, aw: 0, ended: null, final: null });
@@ -315,6 +355,7 @@ const setSched = (l) => { store.setKV('schedule', l); broadcast({ t: 'sched' });
 // con un juego programado en curso, solo sus usuarios asignados (y Admin) pueden operar; los demás solo miran
 function assignedOk(user, c) {
   if (!user || auth.hasRole(user, 'admin')) return true;
+  if (/^bc[A-Z]/.test(String(c.a))) return true;              // Broadcast Pro solo muestra datos
   if (c.a === 'scheduleStart') { const g = getSched().find((x) => x.id === num(c.id)); return !!g && g.users.includes(user.id); }
   const g = S.scheduleId && getSched().find((x) => x.id === S.scheduleId);
   return !g || !g.users.length || g.users.includes(user.id);
@@ -473,6 +514,22 @@ function run(c) {
       break;
     }
     case 'resetGame': newGame(); break;
+    // ---- Broadcast Pro: preparar no toca la transmisión; solo AL AIRE (bcTake) cambia el Program ----
+    case 'bcCue': {
+      const p = S.bcast.pvw;
+      S.bcast.pvw = cleanLive({ ...p, g: c.g, team: c.team ?? p.team, idx: c.idx ?? p.idx });
+      break;
+    }
+    case 'bcBug': S.bcast[c.where === 'pgm' ? 'pgm' : 'pvw'].bug = !!c.on; break;          // el scorebug es su propia capa
+    case 'bcTake': { const p = S.bcast.pvw; S.bcast.pgm = cleanLive({ ...S.bcast.pgm, g: p.g, team: p.team, idx: p.idx }); break; }
+    case 'bcClear': if (!S.bcast.pgm.g) return false; S.bcast.pgm.g = ''; break;           // quita el gráfico; el scorebug sigue
+    case 'bcClearAll': S.bcast.pgm = { ...S.bcast.pgm, g: '', bug: false }; break;
+    case 'bcSet': {
+      if (!Object.prototype.hasOwnProperty.call(BC_DEFAULT, c.key)) return false;
+      S.settings.bcast = cleanBcast({ ...S.settings.bcast, [c.key]: c.value }, S.settings.bcast);
+      break;
+    }
+    case 'bcReset': S.settings.bcast = cleanBcast({}); break;
     // empezar un juego programado: guarda el actual, carga los equipos de la plantilla y queda ligado a la programación
     case 'scheduleStart': {
       const list = getSched(), g = list.find((x) => x.id === num(c.id));
@@ -607,7 +664,7 @@ const json = (res, obj, code = 200) => {
   res.end(JSON.stringify(obj));
 };
 
-const PROTECTED_PAGES = ['/control.html', '/admin.html'];   // piden usuario; display.html y popup.html quedan abiertas para OBS
+const PROTECTED_PAGES = ['/control.html', '/admin.html', '/produccion.html'];   // piden usuario; display.html y popup.html quedan abiertas para OBS
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
@@ -700,6 +757,7 @@ const server = http.createServer((req, res) => {
     if (!me) { res.writeHead(302, { Location: '/login.html?next=' + encodeURIComponent(url.pathname === '/' ? '/control.html' : url.pathname + url.search) }); return res.end(); }
     if (me.mustChange) { res.writeHead(302, { Location: '/login.html?change=1' }); return res.end(); }
     if (url.pathname === '/' && auth.hasRole(me, 'admin')) { res.writeHead(302, { Location: '/admin.html' }); return res.end(); }   // inicio del admin: el dashboard
+    if (url.pathname === '/produccion.html' && !auth.hasRole(me, 'transmision')) { res.writeHead(302, { Location: '/control.html' }); return res.end(); }
     if (url.pathname === '/admin.html' && !auth.hasRole(me, 'admin') && !auth.hasRole(me, 'historial')) { res.writeHead(302, { Location: '/control.html' }); return res.end(); }
   }
   if (me && me.mustChange) me = null;              // con contraseña temporal solo puede cambiarla; nada más
@@ -833,6 +891,8 @@ const server = http.createServer((req, res) => {
 
   // dirección corta para OBS: el Overlay para transmisión
   if (url.pathname === '/overlay' || url.pathname === '/overlay.html') { res.writeHead(302, { Location: '/display.html?p=overlay' }); return res.end(); }
+  // Broadcast Pro: página de gráficos (solo lectura, abierta para OBS / vMix como el display)
+  if (url.pathname === '/broadcast') { res.writeHead(302, { Location: '/broadcast.html' + url.search }); return res.end(); }
   let p = decodeURIComponent(url.pathname);
   if (p === '/') p = '/control.html';
   const file = path.join(PUBLIC, path.normalize(p));
@@ -941,6 +1001,8 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`  Control (mesa/operador): http://${ip}:${PORT}/control.html   (Usuarios: /admin.html)`);
     console.log(`  Pantalla (OBS):          http://${ip}:${PORT}/display.html`);
     console.log(`  Overlay transmisión:     http://${ip}:${PORT}/overlay`);
+    console.log(`  Broadcast Pro (OBS):     http://${ip}:${PORT}/broadcast`);
+    console.log(`  Consola de producción:   http://${ip}:${PORT}/produccion.html`);
     console.log(`  Rotulos (OBS):           http://${ip}:${PORT}/popup.html\n`);
   }
 });

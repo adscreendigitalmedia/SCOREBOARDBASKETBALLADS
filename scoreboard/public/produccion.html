@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Producción · Broadcast Pro</title>
+<style>
+  @font-face { font-family: 'Barlow Condensed'; src: url(/fonts/barlow-condensed-700.woff2) format('woff2'); font-weight: 700; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; font-size: 14px; }
+  header { display: flex; gap: 14px; align-items: center; padding: 8px 16px; background: #161b22; border-bottom: 1px solid #30363d; position: sticky; top: 0; z-index: 5; }
+  header .brand { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: .06em; }
+  header .brand b { color: #f5b301; }
+  header .sp { margin-left: auto; display: flex; gap: 14px; align-items: center; color: #8b949e; font-size: 13px; }
+  header a { color: #58a6ff; text-decoration: none; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #f85149; display: inline-block; margin-right: 6px; } .dot.ok { background: #3fb950; }
+  main { padding: 14px 16px 40px; max-width: 1700px; margin: 0 auto; }
+  .mon { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .mon > div { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 8px; }
+  .mon h2 { margin: 0 0 6px; font-size: 13px; letter-spacing: .12em; display: flex; gap: 10px; align-items: center; }
+  .tag { padding: 2px 10px; border-radius: 4px; font-weight: 800; color: #fff; }
+  .pv .tag { background: #238636; } .pg .tag { background: #da3633; }
+  .mon .what { color: #8b949e; font-weight: 500; letter-spacing: 0; font-size: 13px; }
+  .scr { position: relative; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: repeating-conic-gradient(#1c2128 0 25%, #11161d 0 50%) 0 0 / 22px 22px; }
+  .pv .scr { outline: 3px solid #238636; } .pg .scr { outline: 3px solid #da3633; }
+  .scr iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+  section { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 12px 14px; margin-top: 14px; }
+  h3 { margin: 0 0 10px; font-size: 13px; letter-spacing: .12em; color: #8b949e; text-transform: uppercase; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button { font: inherit; background: #21262d; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
+  button:hover { border-color: #8b949e; }
+  button:disabled { opacity: .4; cursor: default; }
+  .take { background: #da3633; border-color: #da3633; font-weight: 800; font-size: 18px; padding: 14px 30px; letter-spacing: .06em; }
+  .take:hover { background: #f85149; }
+  .go { background: #238636; border-color: #238636; font-weight: 700; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .card { border: 2px solid #30363d; border-radius: 10px; padding: 10px 12px; background: #0d1117; display: flex; flex-direction: column; gap: 8px; }
+  .card b { font-size: 15px; } .card p { margin: 0; color: #8b949e; font-size: 12px; }
+  .card.pvw { border-color: #238636; } .card.pgm { border-color: #da3633; box-shadow: 0 0 0 1px #da3633 inset; }
+  .card .st { font-size: 11px; font-weight: 800; letter-spacing: .1em; min-height: 14px; }
+  .card.pvw .st::before { content: 'EN PREVIEW '; color: #3fb950; } .card.pgm .st::after { content: ' AL AIRE'; color: #f85149; }
+  select, input[type=number], input[type=text] { font: inherit; background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 6px 8px; }
+  input[type=number] { width: 86px; }
+  input[type=color] { width: 44px; height: 32px; border: 1px solid #30363d; border-radius: 6px; background: #0d1117; padding: 2px; }
+  label { display: flex; flex-direction: column; gap: 3px; color: #8b949e; font-size: 12px; }
+  label.ck { flex-direction: row; align-items: center; gap: 6px; color: #e6edf3; font-size: 13px; }
+  .bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .kbd { color: #8b949e; font-size: 12px; }
+  code { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 2px 6px; font-size: 12px; }
+  .toast { position: fixed; right: 16px; bottom: 16px; background: #da3633; color: #fff; padding: 10px 14px; border-radius: 8px; opacity: 0; transition: opacity .3s; pointer-events: none; }
+  .toast.on { opacity: 1; } .toast.ok { background: #238636; }
+  .bugst { font-weight: 700; }
+  @media (max-width: 900px) { .mon { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">ADSCREEN <b>SPORTS</b> · Broadcast Pro</span>
+  <span class="kbd">Consola de producción</span>
+  <span class="sp"><span><span class="dot" id="dot"></span><span id="status">Conectando…</span></span><span>👤 <b id="uname"></b></span><a href="/control.html" id="panelLink">Panel</a><a href="#" id="logout">Salir</a></span>
+</header>
+<main>
+  <div class="mon">
+    <div class="pv"><h2><span class="tag">PREVIEW</span><span class="what" id="pvWhat"></span></h2><div class="scr"><iframe src="/broadcast.html?preview=1" title="Preview"></iframe></div></div>
+    <div class="pg"><h2><span class="tag">PROGRAM</span><span class="what" id="pgWhat"></span></h2><div class="scr"><iframe src="/broadcast.html" title="Program (al aire)"></iframe></div></div>
+  </div>
+
+  <section>
+    <div class="row" style="justify-content:space-between">
+      <div class="row">
+        <button class="take" id="take" title="Enter">AL AIRE ▶</button>
+        <button id="clear" title="Esc">Quitar gráfico</button>
+        <button id="clearAll">Quitar todo</button>
+      </div>
+      <div class="row">
+        <span class="bugst">Scorebug:</span>
+        <button id="bugPgm"></button>
+        <label class="ck"><input type="checkbox" id="bugPvw"> en Preview</label>
+      </div>
+    </div>
+    <div class="kbd" style="margin-top:8px">Prepara un gráfico (se ve solo en Preview) y apriétalo <b>AL AIRE</b> cuando quieras. El scorebug es una capa aparte: se queda mientras entran y salen los gráficos.
+      Atajos: <b>Enter</b> = al aire, <b>Esc</b> = quitar gráfico.</div>
+  </section>
+
+  <section>
+    <h3>Gráficos</h3>
+    <div class="cards">
+      <div class="card" data-g="player"><b>Ficha de jugador</b><p>Número, nombre, equipo, puntos, rebotes, asistencias y faltas.</p>
+        <div class="row"><select id="plTeam"><option value="home">Local</option><option value="away">Visitante</option></select><select id="plIdx" style="flex:1;min-width:120px"></select></div>
+        <button class="go" data-cue="player">Preparar</button><span class="st"></span></div>
+      <div class="card" data-g="compare"><b>Comparativa de equipos</b><p>% de tiro, triples, libres, rebotes, asistencias, robos, pérdidas y tapones.</p>
+        <button class="go" data-cue="compare">Preparar</button><span class="st"></span></div>
+      <div class="card" data-g="leaders"><b>Líderes del partido</b><p>Puntos, rebotes y asistencias de cada equipo.</p>
+        <button class="go" data-cue="leaders">Preparar</button><span class="st"></span></div>
+      <div class="card" data-g="lines"><b>Marcador por cuartos</b><p>Puntos de cada periodo y total.</p>
+        <button class="go" data-cue="lines">Preparar</button><span class="st"></span></div>
+    </div>
+  </section>
+
+  <section>
+    <h3>Ajustes de la presentación</h3>
+    <div class="row">
+      <label>Scorebug: posición<select data-k="bugPos"><option value="bc">Abajo centro</option><option value="bl">Abajo izquierda</option><option value="br">Abajo derecha</option>
+        <option value="tc">Arriba centro</option><option value="tl">Arriba izquierda</option><option value="tr">Arriba derecha</option></select></label>
+      <label>Mover X (px)<input type="number" step="5" data-k="bugX"></label>
+      <label>Mover Y (px)<input type="number" step="5" data-k="bugY"></label>
+      <label>Tamaño scorebug %<input type="number" step="5" min="40" max="250" data-k="bugScale"></label>
+      <label>Tamaño gráficos %<input type="number" step="5" min="40" max="250" data-k="gfxScale"></label>
+      <label>Gráficos subir/bajar (px)<input type="number" step="5" data-k="gfxY"></label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <label>Color local<input type="color" data-k="home"></label>
+      <label>Color visitante<input type="color" data-k="away"></label>
+      <label>Acento<input type="color" data-k="accent"></label>
+      <label>Fondo de paneles<input type="color" data-k="panel"></label>
+      <label>Texto<input type="color" data-k="text"></label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <label class="ck"><input type="checkbox" data-k="showLogos"> Logos</label>
+      <label class="ck"><input type="checkbox" data-k="showFouls"> Faltas</label>
+      <label class="ck"><input type="checkbox" data-k="showBonus"> BONUS</label>
+      <label class="ck"><input type="checkbox" data-k="showPoss"> Posesión</label>
+      <label class="ck"><input type="checkbox" data-k="showShot"> Reloj de lanzamiento</label>
+      <label class="ck"><input type="checkbox" data-k="showTO"> Tiempos fuera</label>
+      <label class="ck"><input type="checkbox" data-k="showBrand"> Marca AdScreen Sports</label>
+      <label class="ck"><input type="checkbox" data-k="names"> Nombre completo (no siglas)</label>
+      <label class="ck"><input type="checkbox" data-k="alerts"> Aviso de tiempo fuera / descanso / final</label>
+    </div>
+    <div class="bar"><button id="reset">Restablecer ajustes</button><span class="kbd">Los ajustes se ven al momento en Preview y Program, y se guardan aunque se reinicie el servidor.</span></div>
+  </section>
+
+  <section>
+    <h3>Enlaces para OBS / vMix</h3>
+    <div class="row"><span>Program (al aire):</span><code id="uPgm"></code><button data-copy="uPgm">Copiar</button></div>
+    <div class="row" style="margin-top:8px"><span>Preview (opcional, para un monitor):</span><code id="uPvw"></code><button data-copy="uPvw">Copiar</button></div>
+    <div class="kbd" style="margin-top:8px">OBS: <i>Fuentes → + → Navegador</i>, ancho 1920 y alto 1080. vMix: <i>Add Input → Web Browser</i>, 1920×1080.
+      También puedes dejar el enlace del Overlay (<code>/overlay</code>) y escoger <b>Estilo: Broadcast Pro</b> en el panel.</div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (s) => document.querySelector(s), $$ = (s) => document.querySelectorAll(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const NAMES = { player: 'Ficha de jugador', compare: 'Comparativa', leaders: 'Líderes', lines: 'Marcador por cuartos' };
+let S = null, ws = null, ME = null;
+
+function toast(t, ok) { const e = $('#toast'); e.textContent = t; e.classList.toggle('ok', !!ok); e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 3500); }
+const send = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'cmd', ...o })); else toast('Sin conexión con el servidor'); };
+
+$('#uPgm').textContent = location.origin + '/broadcast';
+$('#uPvw').textContent = location.origin + '/broadcast?preview=1';
+$$('[data-copy]').forEach((b) => (b.onclick = () => { const t = $('#' + b.dataset.copy).textContent; navigator.clipboard ? navigator.clipboard.writeText(t).then(() => toast('Enlace copiado', true), () => toast(t, true)) : toast(t, true); }));
+$('#logout').onclick = async (e) => { e.preventDefault(); await fetch('/api/logout', { method: 'POST' }); location.href = '/login.html'; };
+fetch('/api/me').then((r) => r.json()).then((j) => {
+  if (!j.ok) return (location.href = '/login.html?next=/produccion.html');
+  ME = j.user; $('#uname').textContent = ME.name || ME.username;
+  // quien solo tiene el rol Transmisión no usa el panel de la mesa
+  $('#panelLink').hidden = ME.roles.length === 1 && ME.roles[0] === 'transmision';
+});
+
+// ---------- botones ----------
+function liveText(lv) {
+  if (!lv.g) return 'sin gráfico';
+  if (lv.g === 'player') { const p = S.teams[lv.team].players[lv.idx] || {}; return `${NAMES.player}: ${p.n ? '#' + p.n + ' ' : ''}${p.name || '—'} (${S.teams[lv.team].short || S.teams[lv.team].name})`; }
+  return NAMES[lv.g];
+}
+$$('[data-cue]').forEach((b) => (b.onclick = () => {
+  const g = b.dataset.cue;
+  if (g === 'player') {
+    if ($('#plIdx').value === '') return toast('Ese equipo no tiene jugadores con nombre');
+    send({ a: 'bcCue', g, team: $('#plTeam').value, idx: +$('#plIdx').value });
+  } else send({ a: 'bcCue', g });
+}));
+$('#take').onclick = () => send({ a: 'bcTake' });
+$('#clear').onclick = () => send({ a: 'bcClear' });
+$('#clearAll').onclick = () => { if (confirm('¿Quitar de la transmisión el gráfico y también el scorebug?')) send({ a: 'bcClearAll' }); };
+$('#bugPgm').onclick = () => send({ a: 'bcBug', where: 'pgm', on: !S.bcast.pgm.bug });
+$('#bugPvw').onchange = (e) => send({ a: 'bcBug', where: 'pvw', on: e.target.checked });
+$('#plTeam').onchange = () => fillPlayers(true);
+$('#reset').onclick = () => { if (confirm('¿Volver a la posición, tamaño y colores originales de Broadcast Pro?')) send({ a: 'bcReset' }); };
+addEventListener('keydown', (e) => {
+  if (e.target.closest('input,select,textarea')) return;
+  if (e.key === 'Enter') { e.preventDefault(); send({ a: 'bcTake' }); }
+  else if (e.key === 'Escape') send({ a: 'bcClear' });
+});
+// ajustes: cada cambio se manda al servidor (que los valida y guarda)
+document.addEventListener('change', (e) => {
+  const k = e.target.dataset && e.target.dataset.k; if (!k) return;
+  const el = e.target, value = el.type === 'checkbox' ? el.checked : el.type === 'number' ? +el.value : el.value;
+  send({ a: 'bcSet', key: k, value });
+});
+document.addEventListener('input', (e) => {        // colores: en vivo mientras se escoge
+  const el = e.target; if (el.type !== 'color' || !el.dataset.k) return;
+  clearTimeout(el._t); el._t = setTimeout(() => send({ a: 'bcSet', key: el.dataset.k, value: el.value }), 120);
+});
+
+let plKey = '';
+function fillPlayers(force) {
+  const t = S.teams[$('#plTeam').value], key = $('#plTeam').value + JSON.stringify(t.players.map((p) => [p.n, p.name]));
+  if (!force && key === plKey) return; plKey = key;
+  const cur = $('#plIdx').value;
+  $('#plIdx').innerHTML = t.players.map((p, i) => (p.name ? `<option value="${i}">${p.n ? '#' + esc(p.n) + ' ' : ''}${esc(p.name)}</option>` : '')).join('');
+  if ([...$('#plIdx').options].some((o) => o.value === cur)) $('#plIdx').value = cur;
+}
+function render() {
+  const c = S.settings.bcast, pv = S.bcast.pvw, pg = S.bcast.pgm;
+  $('#plTeam').options[0].text = 'Local: ' + (S.teams.home.short || S.teams.home.name);
+  $('#plTeam').options[1].text = 'Visitante: ' + (S.teams.away.short || S.teams.away.name);
+  fillPlayers();
+  $('#pvWhat').textContent = liveText(pv) + (pv.bug ? ' · scorebug' : '');
+  $('#pgWhat').textContent = liveText(pg) + (pg.bug ? ' · scorebug' : ' · sin scorebug');
+  $$('.card').forEach((el) => { const g = el.dataset.g; el.classList.toggle('pvw', pv.g === g); el.classList.toggle('pgm', pg.g === g); });
+  const same = pv.g === pg.g && (pv.g !== 'player' || (pv.team === pg.team && pv.idx === pg.idx));
+  $('#take').disabled = !pv.g || same;
+  $('#clear').disabled = !pg.g;
+  $('#bugPgm').textContent = pg.bug ? 'AL AIRE · quitar' : 'Fuera · poner al aire';
+  $('#bugPgm').style.background = pg.bug ? '#da3633' : ''; $('#bugPgm').style.borderColor = pg.bug ? '#da3633' : '';
+  $('#bugPvw').checked = pv.bug;
+  $$('[data-k]').forEach((el) => {
+    if (document.activeElement === el) return;               // no se pisa lo que se está escribiendo
+    const v = c[el.dataset.k];
+    if (el.type === 'checkbox') el.checked = !!v; else if (String(el.value) !== String(v)) el.value = v;
+  });
+}
+
+let wait = 500;
+function connect() {
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
+  ws.onopen = () => { wait = 500; $('#dot').classList.add('ok'); $('#status').textContent = 'Conectado'; };
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.t === 'state') { S = m.s; render(); }
+    else if (m.t === 'err') { toast(m.msg); if (m.login) location.href = '/login.html?next=/produccion.html'; }
+  };
+  ws.onclose = () => { $('#dot').classList.remove('ok'); $('#status').textContent = 'Reconectando…'; setTimeout(connect, wait); wait = Math.min(5000, wait * 2); };
+}
+connect();
+</script>
+</body>
+</html>

@@ -221,6 +221,8 @@ function screenOf(set) {
   return list.find((x) => x.id === SCREEN_ID) || list.find((x) => x.id === 'principal') || list[0] || SCR;
 }
 function applyScreen(sc) {
+  // Overlay en estilo Broadcast Pro: el mismo enlace de OBS pasa a la página de gráficos (y regresa sola si cambian el estilo)
+  if (sc.id === 'overlay' && sc.bugStyle === 'pro') { location.replace('/broadcast.html?from=overlay'); return; }
   SCR = sc;
   const st = $('stage').style, px = (v) => Math.max(0, Math.round(v)) + 'px';
   const botH = sc.h - sc.padT - sc.padB - sc.titleH - sc.topH - 2 * sc.gapY;
