@@ -144,8 +144,61 @@
 
   /* ===== modo CENTRO (dentro de la pantalla del centro del scoreboard): colores del scoreboard y gráfico centrado ===== */
   html.center #bug { display: none; }
-  html.center .g { bottom: auto !important; }
-  html.center #g-lines { transform: scale(.92); } html.center #g-lines.on { transform: none; }
+  /* lienzo de 1000 px de ancho con la forma de la caja del centro; cada gráfico la llena completa (como pantalla completa) */
+  html.center .g { left: 0 !important; top: 0 !important; bottom: auto !important; width: 100% !important; height: 100% !important; display: flex; flex-direction: column; }
+  /* Líderes, Marcador por cuartos y Comparativa: se despliegan desde arriba y se recogen hacia arriba */
+  html.center #g-compare, html.center #g-leaders, html.center #g-lines { opacity: 1; transform: none; clip-path: inset(0 0 100% 0); transition: clip-path .45s cubic-bezier(.6,0,.4,1); }
+  html.center #g-compare.on, html.center #g-leaders.on, html.center #g-lines.on { clip-path: inset(0 0 0 0); transition: clip-path .75s cubic-bezier(.2,.85,.25,1); }
+  html.center .gt { flex: 0 0 auto; height: 70px; font-size: 40px; }
+  html.center .gt small { font-size: 22px; }
+  html.center .teamsRow { flex: 0 0 auto; height: 74px; grid-template-columns: 1fr 230px 1fr; }
+  html.center .teamsRow > div { font-size: 40px; }
+  html.center .row { flex: 1 1 0; height: auto !important; grid-template-columns: 1fr 230px 1fr; }
+  html.center .row .lab { font-size: 22px; }
+  html.center .side .v { font-size: 40px; }
+  html.center .side .who { font-size: 34px; }
+  html.center #g-leaders .side .v { font-size: 64px; }
+  html.center .foot { flex: 0 0 8px; height: 8px; }
+  html.center #g-lines table { flex: 1; width: 100%; }
+  html.center #g-lines tr.row { display: table-row !important; }
+  html.center #g-lines th { height: 46px; font-size: 22px; }
+  html.center #g-lines td { font-size: 64px; height: auto; }
+  html.center #g-lines td.tn { width: 30%; font-size: 52px; }
+  html.center #g-lines td.tot { font-size: 72px; }
+  /* Ficha de jugador a pantalla completa (estilo de la ficha del bateador): entra desde la derecha y sale hacia la izquierda */
+  html.center #g-player { display: block; clip-path: none; filter: none; background: linear-gradient(135deg, var(--chead) 0%, var(--panel) 100%);
+    opacity: 0; transform: translateX(4%); transition: opacity .38s ease, transform .38s cubic-bezier(.4,0,.8,.4); }
+  html.center #g-player.on { opacity: 1; transform: none; transition: opacity .56s ease, transform .56s cubic-bezier(.2,.7,.2,1); }
+  html.center.clear #g-player { background: transparent; }
+  .pf { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  .pf::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px); background-size: 50px 50px;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 60%); mask-image: linear-gradient(90deg, transparent 0%, #000 60%); }
+  .pf-head { position: relative; display: flex; justify-content: space-between; gap: 20px; padding: 24px 34px 0; font-weight: 800; font-size: 30px; letter-spacing: .15em; color: var(--accent); white-space: nowrap; text-transform: uppercase; }
+  .pf-main { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 34px; align-items: center; padding: 0 34px; }
+  .pf-big { font-weight: 800; font-style: italic; font-size: 300px; line-height: .85; color: transparent; -webkit-text-stroke: 5px rgba(255,255,255,.9); min-width: 210px; text-align: center; }
+  .pf-id { display: grid; gap: 18px; min-width: 0; }
+  .pf-row { display: flex; align-items: center; gap: 22px; min-width: 0; }
+  .pf-num { font-weight: 800; font-style: italic; font-size: 110px; line-height: .9; color: var(--accent); }
+  .pf-bar { width: 7px; align-self: stretch; background: var(--text); }
+  .pf-names { min-width: 0; }
+  .pf-first { font-weight: 700; font-size: 40px; letter-spacing: .06em; text-transform: uppercase; }
+  .pf-last { font-weight: 800; font-style: italic; font-size: 96px; line-height: .95; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pf-last.long { font-size: 70px; }
+  .pf-facts { display: flex; gap: 34px; flex-wrap: wrap; }
+  .pf-grp { display: grid; gap: 4px; }
+  .pf-grp + .pf-grp { padding-left: 34px; border-left: 4px solid rgba(255,255,255,.35); }
+  .pf-grp .gl { font-weight: 800; font-size: 20px; letter-spacing: .16em; color: var(--accent); }
+  .pf-gs { display: flex; gap: 30px; }
+  .pf-gs span { display: block; font-weight: 800; font-size: 20px; letter-spacing: .12em; color: var(--clabel); }
+  .pf-gs b { font-weight: 800; font-size: 60px; line-height: 1.05; }
+  .pf-gs .warn b { color: #ff5a5a; }
+  .pf-slots { position: relative; display: grid; grid-template-columns: repeat(var(--n, 4), 1fr); gap: 8px; padding: 0 16px 16px; }
+  .pf-slot { background: rgba(255,255,255,.1); display: grid; justify-items: center; padding: 8px 0 10px; gap: 2px; }
+  .pf-slot span { font-weight: 700; font-size: 20px; letter-spacing: .12em; color: var(--clabel); }
+  .pf-slot b { font-weight: 800; font-size: 44px; }
+  .pf-slot.cur { background: var(--accent); } .pf-slot.cur span, .pf-slot.cur b { color: var(--ink); }
+  .pf-slot.fut b { color: rgba(255,255,255,.25); }
   html.center .gt { background: var(--chead); color: var(--text); }
   html.center .gt small { color: var(--text); opacity: .8; }
   html.center .row { border-top-color: var(--cline); }
@@ -196,7 +249,7 @@ let S = null, label = '', clk = { g: 0, s: 0, gr: false, sr: false, tm: 0, tr: f
 
 // ---------- escala: diseño 1920×1080 dentro de cualquier tamaño de ventana ----------
 function fit() {
-  if (CENTER && cur.g) return centerFit($('g-' + cur.g));
+  if (CENTER) return centerFit();
   const k = Math.min(innerWidth / 1920, innerHeight / 1080);
   $('stage').style.transform = `translate(${(innerWidth - 1920 * k) / 2}px, ${(innerHeight - 1080 * k) / 2}px) scale(${k})`;
 }
@@ -296,6 +349,7 @@ const teamsRow = (mid) => {
   return `<div class="teamsRow"><div class="h">${H.logo ? `<img src="${esc(H.logo)}" alt="">` : ''}<span data-v="hn"></span></div><div class="mid">${mid}</div><div class="a"><span data-v="an"></span>${A.logo ? `<img src="${esc(A.logo)}" alt="">` : ''}</div></div>`;
 };
 // cada gráfico: build() arma la estructura (una vez), vals() da los valores que se actualizan en su lugar
+const nPer = () => Math.max(4, S.period, S.periodScores.home.length, S.periodScores.away.length);
 const GFX = {
   compare: {
     key: () => S.teams.home.logo + S.teams.away.logo,
@@ -357,9 +411,19 @@ const GFX = {
     },
   },
   player: {
-    key: (lv) => lv.team + ':' + lv.idx + ':' + (S.teams[lv.team].logo || ''),
+    key: (lv) => lv.team + ':' + lv.idx + ':' + (S.teams[lv.team].logo || '') + (CENTER ? ':' + nPer() : ''),
     build: (lv) => {
       const t = S.teams[lv.team];
+      if (CENTER) {
+        const n = nPer(), lab = (i) => (i < 4 ? 'Q' + (i + 1) : i === 4 ? 'OT' : (i - 3) + 'OT');
+        return `<div class="pf"><div class="pf-head"><span data-v="head"></span><span data-v="posl"></span></div>
+          <div class="pf-main"><div class="pf-big" data-v="n"></div><div class="pf-id">
+            <div class="pf-row"><span class="pf-num" data-v="n2"></span><span class="pf-bar"></span><div class="pf-names"><div class="pf-first" data-v="first"></div><div class="pf-last" data-v="last"></div></div></div>
+            <div class="pf-facts"><div class="pf-grp"><div class="gl">EN EL JUEGO</div><div class="pf-gs">${[['PTS', 'pts'], ['REB', 'reb'], ['AST', 'ast'], ['FALTAS', 'pf']].map(([l, k]) => `<div data-c="${k}"><span>${l}</span><b data-v="${k}"></b></div>`).join('')}</div></div>
+              <div class="pf-grp"><div class="gl">DEL EQUIPO</div><div class="pf-gs"><div><span>% PUNTOS</span><b data-v="share"></b></div></div></div></div>
+          </div></div>
+          <div class="pf-slots" style="--n:${n}">${Array.from({ length: n }, (_, j) => `<div class="pf-slot" data-s="${j}"><span>${lab(j)}</span><b data-v="q${j}"></b></div>`).join('')}</div></div>`;
+      }
       return `<div class="no" style="--c:var(--${lv.team})"><small>NÚMERO</small><b data-v="n"></b></div><div class="acc"></div>
         <div class="bd"><div class="top"><div class="nm" data-v="nm"></div><div class="meta"><b data-v="pos"></b><span data-v="tn"></span></div>${t.logo ? `<img src="${esc(t.logo)}" alt="">` : ''}</div>
         <div class="st">${[['PTS', 'pts'], ['REB', 'reb'], ['AST', 'ast'], ['FALTAS', 'pf']].map(([l, k], i) => `<div style="--i:${i}" data-c="${k}"><b data-v="${k}"></b><span>${l}</span></div>`).join('')}</div></div>`;
@@ -367,7 +431,17 @@ const GFX = {
     vals(lv) {
       const t = S.teams[lv.team], p = t.players[lv.idx] || {};
       const V = { n: p.n || '–', nm: p.name || 'Jugador', pos: p.pos || '', tn: t.name, pts: p.pts || 0, reb: p.reb || 0, ast: p.ast || 0, pf: p.pf || 0 };
-      return { V, W: {}, L: {}, warn: { pf: (p.pf || 0) >= (S.settings.foulOut || 5) - 1 } };
+      const extra = {};
+      if (CENTER) {
+        // nombre partido como en la ficha del bateador: lo primero arriba, el apellido grande
+        const parts = String(p.name || 'Jugador').trim().split(/\s+/), first = parts.length > 1 ? parts[0] : '', last = parts.length > 1 ? parts.slice(1).join(' ') : parts[0];
+        Object.assign(V, { n2: p.n || '', first, last, head: 'Jugador · ' + t.name, posl: p.pos ? 'Posición ' + p.pos : '',
+          share: t.score ? Math.round((p.pts || 0) / t.score * 100) + '%' : '0%' });
+        const sc = S.periodScores[lv.team] || [];
+        for (let j = 0; j < nPer(); j++) V['q' + j] = j < S.period ? (sc[j] ?? 0) : '–';
+        extra.slots = true; extra.long = last.length > 10;
+      }
+      return { V, W: {}, L: {}, warn: { pf: (p.pf || 0) >= (S.settings.foulOut || 5) - 1 }, ...extra };
     },
   },
 };
@@ -382,6 +456,8 @@ function fill(el, g, lv) {
   });
   el.querySelectorAll('[data-w]').forEach((x) => { const w = Math.round((d.W[x.dataset.w] || 0) * 100) + '%'; if (x.style.width !== w) x.style.width = w; });
   if (d.warn) el.querySelectorAll('[data-c]').forEach((x) => cls(x, 'warn', !!d.warn[x.dataset.c]));
+  if (d.slots) el.querySelectorAll('[data-s]').forEach((x) => { const j = +x.dataset.s; cls(x, 'cur', j === S.period - 1 && !S.final); cls(x, 'fut', j >= S.period); });
+  if (d.long !== undefined) { const l = el.querySelector('.pf-last'); if (l) cls(l, 'long', d.long); }
 }
 
 // ---------- qué gráfico se ve: sale el anterior (su animación de salida) y entra el nuevo ----------
@@ -389,13 +465,10 @@ const OUT_MS = 450;
 let cur = { key: '', g: '', lv: null }, swapT = null, builtKey = {};
 fit();
 // modo centro: el gráfico se centra y se agranda para llenar la caja del centro
-function centerFit(el) {
-  const w = el.offsetWidth, h = el.offsetHeight; if (!w || !h) return;
-  const L = (1920 - w) / 2 + 'px', T = (1080 - h) / 2 + 'px';
-  if (el.style.left !== L) el.style.left = L; if (el.style.top !== T) el.style.top = T;
-  const k = Math.min(innerWidth / w, innerHeight / h) * 0.94;
-  const tr = `translate(${innerWidth / 2 - 960 * k}px, ${innerHeight / 2 - 540 * k}px) scale(${k})`;
-  if ($('stage').style.transform !== tr) $('stage').style.transform = tr;
+function centerFit() {
+  const dw = 1000, dh = Math.max(300, Math.round(dw * innerHeight / Math.max(1, innerWidth))), k = innerWidth / dw, st = $('stage').style;
+  const W = dw + 'px', H = dh + 'px', tr = `scale(${k})`;
+  if (st.width !== W) st.width = W; if (st.height !== H) st.height = H; if (st.transform !== tr) st.transform = tr;
 }
 // colores del scoreboard: los mismos de Líderes / Comparativa (incluido "Mismo color del fondo", que se calcula en el display)
 let colKey = '';
