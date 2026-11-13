@@ -290,31 +290,36 @@
 </section>
 
 <section class="wide" data-rol="pantallas">
-  <h3>Pantallas: diseño</h3>
-  <label style="margin:0 0 6px;display:flex;gap:6px;align-items:center;color:#e6edf3;font-size:13px"><input type="checkbox" data-path="settings.screensOn" data-type="bool">
-    Mostrar ajustes de pantallas (varias pantallas, tamaños, marcador tipo TV y diseños TV propios)</label>
-  <div id="scrAdv" hidden>
-  <h4 style="margin-top:0">Pantallas y tamaños</h4>
-  <div class="kbd">Todas muestran el mismo scoreboard; cada una con su tamaño y proporciones. En OBS usa el enlace de cada pantalla como Fuente de navegador, con el mismo ancho y alto.</div>
-  <div id="screens"></div>
-  <div class="row" style="margin-top:6px">
-    <div style="flex:1;min-width:160px"><label>Nueva pantalla</label><input type="text" id="nsName" placeholder="ej. LED lateral"></div>
-    <div><label>Tamaño</label><select id="nsPreset"></select></div>
-    <div id="nsCustom" hidden style="display:flex;gap:6px">
-      <div><label>Ancho px</label><input type="number" id="nsW" value="1920" style="width:90px"></div>
-      <div><label>Alto px</label><input type="number" id="nsH" value="1080" style="width:90px"></div>
-    </div>
-    <button class="go" id="nsAdd" style="margin-top:18px">Agregar pantalla</button>
-  </div>
+  <h3>Overlay para transmisión (OBS)</h3>
+  <div class="kbd">Marcador compacto con fondo transparente para ponerlo encima del video. En OBS: <b>Fuentes → + → Navegador</b>, pega el enlace
+    y pon el mismo ancho y alto de abajo (el tamaño de tu transmisión, normalmente 1920×1080).</div>
+  <div id="overlay"></div>
   <h4>Diseños TV propios (sube tu imagen)</h4>
   <div class="kbd">Haz tu banner en Photoshop / Canva (PNG, puede tener transparencia) y súbelo. Luego arrastra cada dato (puntos, nombres, reloj…) a su lugar sobre la imagen.
-    En cada pantalla elige <b>Estilo: Diseño propio</b> y el diseño. Con <b>Exportar</b> te llevas el diseño (imagen incluida) a otro servidor y lo subes con <b>Importar</b>.</div>
+    En el Overlay elige <b>Estilo: Diseño propio</b> y el diseño. Con <b>Exportar</b> te llevas el diseño (imagen incluida) a otro servidor y lo subes con <b>Importar</b>.</div>
   <div class="row" style="margin-top:6px">
     <div style="flex:1;min-width:160px"><label>Nombre del diseño</label><input type="text" id="nlName" placeholder="ej. Banner NBA azul"></div>
     <div><label>Nuevo: sube la imagen</label><input type="file" id="nlImg" accept="image/png,image/webp,image/jpeg,image/svg+xml"></div>
     <div><label>Importar diseño (.json)</label><input type="file" id="nlJson" accept=".json,application/json"></div>
   </div>
   <div id="layouts"></div>
+</section>
+
+<section class="wide" data-rol="pantallas">
+  <h3>Pantallas: diseño</h3>
+  <label style="margin:0 0 6px;display:flex;gap:6px;align-items:center;color:#e6edf3;font-size:13px"><input type="checkbox" data-path="settings.screensOn" data-type="bool">
+    Mostrar pantallas y tamaños (varias pantallas LED, cada una con su tamaño)</label>
+  <div id="scrAdv" hidden>
+  <h4 style="margin-top:0">Pantallas y tamaños</h4>
+  <div class="kbd">Escribe el ancho y el alto en píxeles de tu pantalla (o de lo que manda el procesador LED) y el tablero se adapta solo a ese tamaño.
+    Todas muestran el mismo scoreboard. Usa el enlace de cada pantalla en el navegador o en OBS.</div>
+  <div id="screens"></div>
+  <div class="row" style="margin-top:6px">
+    <div style="flex:1;min-width:160px"><label>Nueva pantalla</label><input type="text" id="nsName" placeholder="ej. LED lateral"></div>
+    <div><label>Ancho px</label><input type="number" id="nsW" min="64" max="7680" placeholder="1920" style="width:100px"></div>
+    <div><label>Alto px</label><input type="number" id="nsH" min="64" max="4320" placeholder="1080" style="width:100px"></div>
+    <button class="go" id="nsAdd" style="margin-top:18px">Agregar pantalla</button>
+  </div>
   </div>
   <h4>General</h4>
   <div class="row">
@@ -412,50 +417,24 @@ const setHdr = () => document.documentElement.style.setProperty('--hdr', (docume
 addEventListener('resize', setHdr); setHdr();
 
 // ---------- pantallas (mismo diseño, distintos tamaños) ----------
-const SIZE_PRESETS = [
-  ['1920x1080', 'Full HD 1920×1080'], ['1280x720', 'HD 1280×720'], ['3840x2160', '4K 3840×2160'],
-  ['1280x640', 'P3.91 10×5 gabinetes (1280×640)'], ['1536x768', 'P3.91 12×6 gabinetes (1536×768)'],
-  ['1920x1024', 'P3.91 15×8 gabinetes (1920×1024)'], ['2048x1152', 'P3.91 16×9 gabinetes (2048×1152)'],
-  ['256x768', 'Póster LED 256×768 (1)'], ['512x768', '2 pósters unidos (512×768)'], ['768x768', '3 pósters unidos (768×768)'],
-  ['1024x768', '4 pósters unidos (1024×768)'], ['1536x768', '6 pósters unidos (1536×768)'], ['2048x768', '8 pósters unidos (2048×768)'],
-  ['custom', 'Personalizado (escribe ancho y alto)…'],
-];
 const SCREEN_FIELDS = [['fs', 'Escala de letra %'], ['titleH', 'Alto del título'], ['topH', 'Alto del marcador superior'], ['scoreW', 'Ancho de cada marcador'],
   ['clockW', 'Ancho del reloj'], ['sideW', 'Ancho de los laterales'], ['statsH', 'Alto de estadísticas (abajo)'], ['stripH', 'Alto de la franja inferior'],
   ['gapX', 'Separación horizontal'], ['gapY', 'Separación vertical'], ['padX', 'Margen a los lados'], ['padT', 'Margen arriba'], ['padB', 'Margen abajo']];
-$('#nsPreset').innerHTML = SIZE_PRESETS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
-$('#nsPreset').onchange = () => { $('#nsCustom').hidden = $('#nsPreset').value !== 'custom'; };
 $('#nsAdd').onclick = () => {
-  const v = $('#nsPreset').value, [w, h] = v === 'custom' ? [+$('#nsW').value, +$('#nsH').value] : v.split('x').map(Number);
+  const w = +$('#nsW').value, h = +$('#nsH').value;
   if (!(w >= 64 && h >= 64 && w <= 7680 && h <= 4320)) return toast('Tamaño no válido (de 64×64 a 7680×4320)');
-  send({ a: 'screenAdd', name: $('#nsName').value.trim() || undefined, w, h }); $('#nsName').value = '';
+  send({ a: 'screenAdd', name: $('#nsName').value.trim() || undefined, w, h }); $('#nsName').value = $('#nsW').value = $('#nsH').value = '';
 };
-const screenUrl = (sc) => `${location.origin}/display.html${sc.id === 'principal' ? '' : '?p=' + sc.id}`;
-let screensKey = '';
-function renderScreens() {
-  const list = (S && S.settings.screens) || [];
-  const key = list.map((x) => x.id).join(',') + '|' + (S.settings.bugLayouts || []).map((L) => L.id + L.name).join(',');
-  if (key !== screensKey) {                     // se redibuja solo si cambia la lista (los valores los llena paint)
-    screensKey = key;
-    $('#screens').innerHTML = list.map((sc, i) => {
-      const P = `settings.screens.${i}`;
-      return `<div class="scr" data-sid="${sc.id}">
-        <div class="row">
-          <div style="flex:1;min-width:160px"><label>Nombre</label><input type="text" data-path="${P}.name"></div>
-          <div><label>Ancho px</label><input type="number" data-path="${P}.w" data-type="int"></div>
-          <div><label>Alto px</label><input type="number" data-path="${P}.h" data-type="int"></div>
-          <div><label>Diseño</label><select data-path="${P}.layout">
-            <option value="auto">Automático (TV si no cabe)</option><option value="full">Tablero completo</option><option value="bug">Marcador tipo TV</option></select></div>
-          <div><label>Atajo de tamaño</label><select data-preset="${i}"><option value="">—</option>${SIZE_PRESETS.filter(([v]) => v !== 'custom').map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></div>
-          <button class="sm" data-fit="${sc.id}" style="margin-top:18px" title="Recalcula márgenes, cajas y letra para el ancho y alto">Ajustar proporciones al tamaño</button>
-          ${sc.id === 'principal' ? '' : `<button class="sm stop" data-sdel="${sc.id}" style="margin-top:18px">Borrar</button>`}
-        </div>
-        <div class="row" style="margin-top:6px"><span class="kbd">OBS:</span> <code>${screenUrl(sc)}</code>
-          <button class="sm" data-copy="${screenUrl(sc)}">Copiar</button><a class="btn sm" href="${screenUrl(sc)}" target="_blank">Abrir</a>
-          <span class="warnmsg" data-sw="${i}"></span></div>
-        <div class="row" style="margin-top:6px"><span class="kbd">Marcador tipo TV (el resto queda transparente para anuncios):</span>
+const screenUrl = (sc) => (sc.id === 'overlay' ? `${location.origin}/overlay` : `${location.origin}/display.html${sc.id === 'principal' ? '' : '?p=' + sc.id}`);
+const urlRow = (sc, i) => `<div class="row" style="margin-top:6px"><span class="kbd">Enlace:</span> <code>${screenUrl(sc)}</code>
+  <button class="sm" data-copy="${screenUrl(sc)}">Copiar</button><a class="btn sm" href="${screenUrl(sc)}" target="_blank">Abrir</a>
+  <span class="warnmsg" data-sw="${i}"></span></div>`;
+// marcador compacto del Overlay: estilo, diseño propio, posición y tamaño
+function bugBlock(i) {
+  const P = `settings.screens.${i}`;
+  return `<div class="row" style="margin-top:6px">
           <div><label>Estilo</label><select data-path="${P}.bugStyle">
-            <option value="top">Fila de arriba del tablero</option><option value="tv">Banner TV compacto</option><option value="custom">Diseño propio (imagen)</option></select></div>
+            <option value="tv">Banner TV compacto</option><option value="top">Fila de arriba del tablero</option><option value="custom">Diseño propio (imagen)</option></select></div>
           <div><label>Diseño propio</label><select data-path="${P}.bugLayout"><option value="">—</option>${(S.settings.bugLayouts || []).map((L) => `<option value="${L.id}">${esc(L.name)}</option>`).join('')}</select></div>
           <div><label>Posición</label><select data-path="${P}.bugPos">
             <option value="tl">Arriba izquierda</option><option value="tc">Arriba</option><option value="tr">Arriba derecha</option>
@@ -469,8 +448,8 @@ function renderScreens() {
           <div><label>Atajo</label><select data-bugpreset="${i}"><option value="">—</option>
             <option value="bc,50,8">Banner TV abajo (estilo NBA)</option><option value="tc,50,8">Banner TV arriba</option>
             <option value="bl,40,8">Banner esquina abajo izquierda</option><option value="br,40,8">Banner esquina abajo derecha</option>
-            <option value="tl,40,8">Banner esquina arriba izquierda</option><option value="tr,40,8">Banner esquina arriba derecha</option>
-            <option value="bc,100,10">Franja completa abajo</option><option value="tc,100,25">Franja arriba (póster)</option></select></div>
+            <option value="tl,30,8">Esquina arriba izquierda</option><option value="tr,30,8">Esquina arriba derecha</option>
+            <option value="bc,100,10">Franja completa abajo</option></select></div>
           <button class="sm" data-fitimg="${i}" style="margin-top:18px" title="Cambia el Alto % para que el área tenga la forma de la imagen del diseño propio">Alto según la imagen</button>
           <span class="kbd" data-bugpx="${i}"></span></div>
         <div class="row" style="margin-top:6px;align-items:flex-start">
@@ -481,8 +460,31 @@ function renderScreens() {
             <div><button class="sm" data-mv="0,1" title="Bajar">▼</button></div>
             <label style="margin:4px 0 0">Paso <select data-step><option value="1">1%</option><option value="5" selected>5%</option><option value="10">10%</option></select></label>
           </div>
-          <span class="kbd" style="max-width:300px">Arrastra el rectángulo azul para mover el marcador a donde quieras (queda en posición <b>Libre</b>). Lo cuadriculado es lo que queda libre para anuncios.</span></div>
-        <details><summary>Proporciones del tablero completo (px del lienzo)</summary>
+          <span class="kbd" style="max-width:300px">Arrastra el rectángulo azul para mover el marcador a donde quieras (queda en posición <b>Libre</b>). Lo cuadriculado es el video que se sigue viendo.</span></div>`;
+}
+let screensKey = '';
+function renderScreens() {
+  const list = (S && S.settings.screens) || [];
+  const key = list.map((x) => x.id).join(',') + '|' + (S.settings.bugLayouts || []).map((L) => L.id + L.name).join(',');
+  if (key !== screensKey) {                     // se redibuja solo si cambia la lista (los valores los llena paint)
+    screensKey = key;
+    const oi = list.findIndex((x) => x.id === 'overlay'), ov = list[oi];
+    $('#overlay').innerHTML = ov ? `<div class="scr" data-sid="overlay">${urlRow(ov, oi)}
+        <div class="row" style="margin-top:6px">
+          <div><label>Ancho del video px</label><input type="number" data-path="settings.screens.${oi}.w" data-type="int"></div>
+          <div><label>Alto del video px</label><input type="number" data-path="settings.screens.${oi}.h" data-type="int"></div>
+        </div>${bugBlock(oi)}</div>` : '';
+    $('#screens').innerHTML = list.map((sc, i) => {
+      if (sc.id === 'overlay') return '';
+      const P = `settings.screens.${i}`;
+      return `<div class="scr" data-sid="${sc.id}">
+        <div class="row">
+          <div style="flex:1;min-width:160px"><label>Nombre</label><input type="text" data-path="${P}.name"></div>
+          <div><label>Ancho px</label><input type="number" min="64" max="7680" data-path="${P}.w" data-type="int"></div>
+          <div><label>Alto px</label><input type="number" min="64" max="4320" data-path="${P}.h" data-type="int"></div>
+          ${sc.id === 'principal' ? '' : `<button class="sm stop" data-sdel="${sc.id}" style="margin-top:18px">Borrar</button>`}
+        </div>${urlRow(sc, i)}
+        <details><summary>Ajuste fino de proporciones (px del lienzo; se recalculan solas al cambiar el tamaño)</summary>
           <div class="grid">${SCREEN_FIELDS.map(([f, t]) => `<div><label>${t}</label><input type="number" data-path="${P}.${f}" data-type="int"></div>`).join('')}</div>
         </details>
         <div class="row" style="margin-top:6px"><span class="kbd">Fondo propio de esta pantalla (si no, usa el general):</span>
@@ -497,18 +499,17 @@ function renderScreens() {
     const w = $(`[data-sw="${i}"]`), bg = $(`[data-sbg="${i}"]`); if (!w) return;
     const botH = sc.h - sc.padT - sc.padB - sc.titleH - sc.topH - 2 * sc.gapY;
     const bad = [];
-    const tv = sc.layout === 'bug' || (sc.layout === 'auto' && Math.min(sc.w / 1920, sc.h / 1080) < 0.55);   // igual que display.html
+    const tv = sc.id === 'overlay';
     const bw = Math.round(sc.w * sc.bugW / 100), bh = Math.round(sc.h * sc.bugH / 100), bp = $(`[data-bugpx="${i}"]`);
     drawMini(i, sc);
 
     const fx = $(`[data-path="settings.screens.${i}.bugX"]`), fy = $(`[data-path="settings.screens.${i}.bugY"]`);
     if (fx) fx.max = Math.round((100 - sc.bugW) * 10) / 10;
     if (fy) fy.max = Math.round((100 - sc.bugH) * 10) / 10;
-    const free = sc.bugW >= 100 && sc.bugH >= 100 ? 'nada' : sc.bugW >= 100 ? `${sc.w}×${sc.h - bh} px` : sc.bugH >= 100 ? `${sc.w - bw}×${sc.h} px` : `toda la pantalla menos el marcador (${Math.round(100 - sc.bugW * sc.bugH / 100)}%)`;
-    if (bp) bp.textContent = `= ${bw}×${bh} px; libre para anuncios: ${free}`;
+    if (bp) bp.textContent = `= ${bw}×${bh} px del video`;
     const forma = sc.bugStyle === 'custom' ? 'diseño propio' : sc.bugStyle === 'tv' ? (bw / bh >= 5 ? 'banner' : bw / bh >= 2.2 ? 'barra' : bw / bh >= 0.8 ? 'caja' : 'vertical')
       : (bw / bh >= 4.5 ? 'fila del tablero: franja' : bw / bh >= 1.3 ? 'fila del tablero: caja' : 'fila del tablero: póster');
-    if (tv) { w.textContent = '📺 muestra el marcador tipo TV (' + forma + ', ' + bw + '×' + bh + ' px)'; w.style.color = '#58a6ff'; bg.textContent = ''; return; }
+    if (tv) { w.textContent = '📺 ' + forma + ', ' + bw + '×' + bh + ' px, fondo transparente'; w.style.color = '#58a6ff'; return; }
     w.style.color = '';
     if (sc.w - 2 * sc.padX - 2 * sc.sideW - 2 * sc.gapX < 40) bad.push('los laterales no dejan espacio al centro');
     if ((sc.w - 2 * sc.padX - 2 * sc.scoreW - sc.clockW) / 2 < 20) bad.push('marcadores + reloj no dejan espacio a los logos');
@@ -524,12 +525,6 @@ document.addEventListener('change', (e) => {
     send({ a: 'set', path: P + '.bugPos', value: pos }); send({ a: 'set', path: P + '.bugW', value: +w }); send({ a: 'set', path: P + '.bugH', value: +h });
     send({ a: 'set', path: P + '.layout', value: 'bug' }); el.value = '';
     return;
-  }
-  if (el.dataset && el.dataset.preset != null && el.value) {
-    const sc = S.settings.screens[+el.dataset.preset]; const [w, h] = el.value.split('x').map(Number);
-    send({ a: 'set', path: `settings.screens.${el.dataset.preset}.w`, value: w });
-    send({ a: 'set', path: `settings.screens.${el.dataset.preset}.h`, value: h });
-    send({ a: 'screenFit', id: sc.id }); el.value = '';
   }
 });
 // ---- X % / Y %: mover en vivo; si la posición era fija, pasa a Libre desde donde estaba ----

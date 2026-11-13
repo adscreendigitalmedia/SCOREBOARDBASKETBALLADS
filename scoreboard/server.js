@@ -67,7 +67,7 @@ function scaledScreen(w, h) {
 }
 function cleanScreen(x) {
   const out = { id: String(x.id || 'p' + Date.now().toString(36)).replace(/[^\w-]/g, '').slice(0, 24) || 'p', name: String(x.name || 'Pantalla').slice(0, 40), bg: typeof x.bg === 'string' ? x.bg : '',
-    layout: ['auto', 'full', 'bug'].includes(x.layout) ? x.layout : 'auto',   // auto = marcador tipo TV si el tablero no cabe
+    layout: x.id === 'overlay' ? 'bug' : 'full',   // Overlay para transmisión = marcador compacto; pantallas = tablero completo
     // marcador tipo TV: ocupa solo una parte (el resto queda transparente para anuncios)
     bugPos: ['tl', 'tc', 'tr', 'ml', 'mc', 'mr', 'bl', 'bc', 'br', 'free'].includes(x.bugPos) ? x.bugPos : 'bc',
     // posición libre (arrastrando en el panel): esquina superior izquierda del marcador, en % de la pantalla
@@ -114,6 +114,8 @@ function cleanLayout(x) {
 }
 
 const mainScreen = () => ({ id: 'principal', name: 'Principal', bg: '', layout: 'full', ...BASE_SCREEN });
+// Overlay para transmisión (OBS): marcador compacto con fondo transparente, banner TV abajo al centro
+const overlayScreen = () => ({ id: 'overlay', name: 'Overlay para transmisión', bg: '', ...BASE_SCREEN, layout: 'bug', bugStyle: 'tv', bugPos: 'bc', bugW: 50, bugH: 8 });
 
 function defaults() {
   return {
@@ -149,7 +151,7 @@ function defaults() {
       screensOn: false,     // panel: mostrar los ajustes de pantallas (ocultos por defecto)
       viewMatch: false,     // true = fondo y franjas del mismo color que la imagen de fondo (se toma solo)
       viewClear: false,     // true = sin fondos (se ve la imagen de fondo / plantilla)
-      screens: [mainScreen()],
+      screens: [mainScreen(), cleanScreen(overlayScreen())],
       bugLayouts: [],            // diseños TV propios (imagen + posición de cada dato)   // pantallas: display.html?p=<id>  (Principal = display.html)
       center: 'black',      // black | transparent | green
       bottom: 'stats',      // cuadro inferior de cada equipo: stats | note
@@ -176,6 +178,7 @@ function migrate(saved) {
   s.settings = { ...d.settings, ...saved.settings };
   s.settings.screens = (Array.isArray(s.settings.screens) && s.settings.screens.length ? s.settings.screens : [mainScreen()]).map(cleanScreen);
   if (!s.settings.screens.some((x) => x.id === 'principal')) s.settings.screens.unshift(mainScreen());
+  if (!s.settings.screens.some((x) => x.id === 'overlay')) s.settings.screens.splice(1, 0, cleanScreen(overlayScreen()));
   s.settings.bugLayouts = (Array.isArray(s.settings.bugLayouts) ? s.settings.bugLayouts : []).map(cleanLayout);
   for (const x of s.settings.screens) if (x.id === 'principal' && !(saved.settings?.screens || []).find((y) => y.id === 'principal')?.layout) x.layout = 'full';
   for (const k of ['home', 'away']) {
@@ -327,7 +330,12 @@ function run(c) {
     case 'set': {
       const r = getParent(String(c.path)); if (!r) return false; r[0][r[1]] = c.value;
       const m = String(c.path).match(/^settings\.screens\.(\d+)\./);                       // medidas de pantalla: siempre dentro de rango
-      if (m && S.settings.screens[m[1]]) S.settings.screens[m[1]] = cleanScreen(S.settings.screens[m[1]]);
+      if (m && S.settings.screens[m[1]]) {
+        let x = cleanScreen(S.settings.screens[m[1]]);
+        // ancho / alto nuevos: el tablero se adapta solo (márgenes, cajas y letra) al tamaño escrito
+        if (/\.(w|h)$/.test(c.path) && x.id !== 'overlay') x = cleanScreen({ ...x, ...(x.w === 1920 && x.h === 1080 ? BASE_SCREEN : scaledScreen(x.w, x.h)) });
+        S.settings.screens[m[1]] = x;
+      }
       const ml = String(c.path).match(/^settings\.bugLayouts\.(\d+)\./);
       if (ml && S.settings.bugLayouts[ml[1]]) S.settings.bugLayouts[ml[1]] = cleanLayout(S.settings.bugLayouts[ml[1]]);
       break;
@@ -357,7 +365,7 @@ function run(c) {
       break;
     }
     case 'screenDel': {
-      if (c.id === 'principal') return false;
+      if (c.id === 'principal' || c.id === 'overlay') return false;
       const n = S.settings.screens.length;
       S.settings.screens = S.settings.screens.filter((x) => x.id !== c.id);
       if (S.settings.screens.length === n) return false;
@@ -823,6 +831,8 @@ const server = http.createServer((req, res) => {
     return res.end(buf);
   }
 
+  // dirección corta para OBS: el Overlay para transmisión
+  if (url.pathname === '/overlay' || url.pathname === '/overlay.html') { res.writeHead(302, { Location: '/display.html?p=overlay' }); return res.end(); }
   let p = decodeURIComponent(url.pathname);
   if (p === '/') p = '/control.html';
   const file = path.join(PUBLIC, path.normalize(p));
@@ -930,6 +940,7 @@ server.listen(PORT, '0.0.0.0', () => {
   for (const ip of ['localhost', ...ips]) {
     console.log(`  Control (mesa/operador): http://${ip}:${PORT}/control.html   (Usuarios: /admin.html)`);
     console.log(`  Pantalla (OBS):          http://${ip}:${PORT}/display.html`);
+    console.log(`  Overlay transmisión:     http://${ip}:${PORT}/overlay`);
     console.log(`  Rotulos (OBS):           http://${ip}:${PORT}/popup.html\n`);
   }
 });
