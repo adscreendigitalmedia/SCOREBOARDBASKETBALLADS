@@ -18,8 +18,7 @@
   .dd a:hover{background:#21262d}
   .ddh{color:#8b949e;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px 3px;border-top:1px solid #30363d;margin-top:4px}
   .ddh:first-child{border-top:0;margin-top:0}
-  .dd .roles a{display:block;border:0;border-radius:6px;padding:7px 10px;margin:0;font-size:14px;color:#e6edf3}
-  .dd .roles a.on{background:#1f6feb;color:#fff}
+  .roles{display:flex;flex-wrap:wrap;gap:4px}
   .ddf{border-top:1px solid #30363d;margin-top:4px;padding:8px 10px 4px;color:#8b949e;font-size:11px;word-break:break-all}
   main{padding:12px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
   section{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px}
@@ -112,14 +111,13 @@
       <a href="/admin.html#usuarios" data-need="admin">👥 Usuarios y permisos</a>
       <a href="/admin.html#programar" data-need="admin">📅 Programar juegos</a>
       <a href="/admin.html#juegos" data-need="historial">🏀 Juegos (historial)</a>
-      <div class="ddh" id="rolesH">Ver en el panel</div>
-      <nav class="roles" id="roles"></nav>
       <div class="ddh">Mi cuenta</div>
       <a href="/login.html?change=1&next=/control.html">🔑 Cambiar contraseña</a>
       <a href="#" id="logout">🚪 Cerrar sesión</a>
       <div class="ddf">Pantalla: <code id="durl"></code></div>
     </div>
   </div>
+  <nav class="roles" id="roles"></nav>
   <div class="who">
     <span class="conn"><span class="dot" id="dot"></span><span id="status">Conectando…</span></span>
     <span class="user">👤 <b id="uname"></b></span>
@@ -376,7 +374,6 @@ function applyRoles() {
   });
   $('#uname').textContent = ME.name || ME.username;
   $$('#menuDd [data-need]').forEach((a) => (a.hidden = !hasRole(a.dataset.need)));   // dashboard: admin, o quien edita el historial
-  $('#rolesH').hidden = tabs.length <= 2;
   document.title = 'Scoreboard - ' + (ROL === 'todo' ? (ME.name || ME.username) : ROLE_NAMES[ROL]);
 }
 // ---------- vista previa en vivo: para todos los usuarios; cada quien recuerda su elección en su navegador ----------
