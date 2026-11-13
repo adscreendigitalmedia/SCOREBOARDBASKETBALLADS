@@ -91,6 +91,8 @@ Orden en Resolume, de abajo hacia arriba: `base` → anuncios → `stats` → `p
 Arriba del panel, **todos los usuarios** (sin importar el rol) ven la pantalla **en vivo**, igual que en OBS. Puedes elegir qué pantalla ver, el tamaño (chica, mediana o grande), **📌 Fijar arriba** para que no se pierda al bajar, u ocultarla. Cada navegador recuerda su elección.
 
 ## Varias pantallas y tamaños
+Estos ajustes están **ocultos** en el panel; para verlos marca *Mostrar ajustes de pantallas* en la sección *Pantallas: diseño*. Las pantallas que ya existen siguen funcionando igual aunque estén ocultos.
+
 En el panel, sección **Pantallas: diseño → Pantallas y tamaños** (rol *Pantallas* o *Admin*):
 - **Agregar pantalla:** nombre y tamaño (Full HD, HD, 4K, atajos P3.91 por gabinetes o *Personalizado*). Las proporciones se calculan solas para ese tamaño.
 - Todas muestran **el mismo scoreboard**; cada una tiene su enlace para OBS: la Principal es `display.html`, las demás `display.html?p=<id>` (botón *Copiar*). En OBS pon la Fuente de navegador con el mismo ancho y alto de la pantalla.

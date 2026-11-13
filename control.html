@@ -268,6 +268,9 @@
 
 <section class="wide" data-rol="pantallas">
   <h3>Pantallas: diseño</h3>
+  <label style="margin:0 0 6px;display:flex;gap:6px;align-items:center;color:#e6edf3;font-size:13px"><input type="checkbox" data-path="settings.screensOn" data-type="bool">
+    Mostrar ajustes de pantallas (varias pantallas, tamaños, marcador tipo TV y diseños TV propios)</label>
+  <div id="scrAdv" hidden>
   <h4 style="margin-top:0">Pantallas y tamaños</h4>
   <div class="kbd">Todas muestran el mismo scoreboard; cada una con su tamaño y proporciones. En OBS usa el enlace de cada pantalla como Fuente de navegador, con el mismo ancho y alto.</div>
   <div id="screens"></div>
@@ -289,6 +292,7 @@
     <div><label>Importar diseño (.json)</label><input type="file" id="nlJson" accept=".json,application/json"></div>
   </div>
   <div id="layouts"></div>
+  </div>
   <h4>General</h4>
   <div class="row">
     <div style="flex:2;min-width:220px"><label>Título superior</label><input type="text" data-path="settings.title"></div>
@@ -844,6 +848,7 @@ function paint() {
     else el.value = v ?? '';
   });
   $('#plabel').textContent = S.final ? 'FINAL' : label;
+  $('#scrAdv').hidden = !S.settings.screensOn;     // ajustes de pantallas: ocultos hasta que se activan
 }
 const two = (n) => String(n).padStart(2, '0');
 function loop() {

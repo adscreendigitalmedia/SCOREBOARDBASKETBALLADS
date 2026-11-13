@@ -146,6 +146,7 @@ function defaults() {
       viewLabel: '#9db4ff', // texto de las etiquetas (PUNTOS, REBOTES...)
       viewLead: '#ffd400',  // el valor que va ganando
       viewText: '#ffffff',  // resto del texto
+      screensOn: false,     // panel: mostrar los ajustes de pantallas (ocultos por defecto)
       viewMatch: false,     // true = fondo y franjas del mismo color que la imagen de fondo (se toma solo)
       viewClear: false,     // true = sin fondos (se ve la imagen de fondo / plantilla)
       screens: [mainScreen()],

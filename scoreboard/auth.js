@@ -54,7 +54,7 @@ for (const [role, list] of Object.entries(BY_ACTION)) for (const a of list) ACTI
 
 // set / inc: depende de qué valor se cambia
 const SETTINGS_JUGADA = ['centerView', 'timeoutMs', 'popupAuto'];
-const SETTINGS_PANTALLAS = ['screens', 'bugLayouts', 'title', 'center', 'bottom', 'bgImage', 'bgOnly', 'viewBg', 'viewHead', 'viewTeams', 'viewLine', 'viewLabel', 'viewLead', 'viewText', 'viewClear', 'viewMatch'];
+const SETTINGS_PANTALLAS = ['screens', 'bugLayouts', 'title', 'center', 'bottom', 'bgImage', 'bgOnly', 'viewBg', 'viewHead', 'viewTeams', 'viewLine', 'viewLabel', 'viewLead', 'viewText', 'viewClear', 'viewMatch', 'screensOn'];
 function rolesFor(c) {
   if (c.a === 'set' || c.a === 'inc') {
     const p = String(c.path || '').split('.');
